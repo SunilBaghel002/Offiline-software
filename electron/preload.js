@@ -47,6 +47,10 @@ const validInvokeChannels = [
   'sync:status',
   'sync:forceSync',
   'sync:getPending',
+  // Settings
+  'settings:getAll',
+  'settings:get',
+  'settings:update',
   // App
   'app:getVersion',
   'app:checkForUpdates',

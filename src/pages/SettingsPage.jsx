@@ -20,17 +20,15 @@ const SettingsPage = () => {
 
   const loadSettings = async () => {
     try {
-      const result = await window.electronAPI.invoke('db:query', {
-        table: 'settings',
-        action: 'SELECT',
-        where: {},
-      });
+      const result = await window.electronAPI.invoke('settings:getAll', {});
       
-      const settingsObj = {};
-      result.forEach(row => {
-        settingsObj[row.key] = row.value;
-      });
-      setSettings(settingsObj);
+      if (Array.isArray(result)) {
+        const settingsObj = {};
+        result.forEach(row => {
+          settingsObj[row.key] = row.value;
+        });
+        setSettings(settingsObj);
+      }
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -44,12 +42,7 @@ const SettingsPage = () => {
     
     try {
       for (const [key, value] of Object.entries(settings)) {
-        await window.electronAPI.invoke('db:query', {
-          table: 'settings',
-          action: 'UPDATE',
-          data: { value },
-          where: { key },
-        });
+        await window.electronAPI.invoke('settings:update', { key, value });
       }
       setSaveMessage('Settings saved successfully!');
       setTimeout(() => setSaveMessage(''), 3000);

@@ -601,6 +601,31 @@ class Database {
     }, { id });
   }
 
+  // ===== Settings Operations =====
+  getSettings() {
+    return this.execute(`SELECT * FROM settings`);
+  }
+
+  getSetting(key) {
+    const results = this.execute(`SELECT value FROM settings WHERE key = ?`, [key]);
+    return results[0]?.value || null;
+  }
+
+  updateSetting(key, value) {
+    const existing = this.execute(`SELECT * FROM settings WHERE key = ?`, [key]);
+    if (existing.length > 0) {
+      this.run(`UPDATE settings SET value = ?, updated_at = ? WHERE key = ?`, 
+        [value, new Date().toISOString(), key]);
+    } else {
+      this.insert('settings', {
+        key,
+        value,
+        updated_at: new Date().toISOString()
+      });
+    }
+    return { success: true };
+  }
+
   // ===== Reports =====
   getDailyReport(date) {
     const sales = this.execute(`SELECT * FROM daily_sales WHERE date = ?`, [date]);

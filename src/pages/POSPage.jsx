@@ -355,15 +355,26 @@ const PaymentModal = ({ total, onClose, onSuccess, userId }) => {
       const result = await cart.createOrder(userId);
 
       if (result.success) {
-        // Complete the order with payment method
+        // Get the full order details
+        const order = await window.electronAPI.invoke('order:getById', { id: result.id });
+
+        // 1. Print KOT to Kitchen immediately when order is placed
+        console.log('Printing KOT to kitchen...');
+        await window.electronAPI.invoke('print:kot', { 
+          order: order,
+          items: order.items 
+        });
+
+        // 2. Complete the order with payment method
         await window.electronAPI.invoke('order:complete', {
           id: result.id,
           paymentMethod: method,
         });
 
-        // Print receipt
-        const order = await window.electronAPI.invoke('order:getById', { id: result.id });
-        await window.electronAPI.invoke('print:receipt', { order });
+        // 3. Refresh order with payment info and print Receipt to customer
+        const completedOrder = await window.electronAPI.invoke('order:getById', { id: result.id });
+        console.log('Printing receipt to customer...');
+        await window.electronAPI.invoke('print:receipt', { order: completedOrder });
 
         setOrderNumber(result.orderNumber);
         setOrderComplete(true);

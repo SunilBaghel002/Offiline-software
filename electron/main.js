@@ -164,9 +164,41 @@ function setupIpcHandlers() {
   // ============ DATABASE OPERATIONS ============
   ipcMain.handle('db:query', async (event, { table, action, data, where }) => {
     try {
+      // For settings table, redirect to proper methods
+      if (table === 'settings' && action === 'SELECT') {
+        return db.getSettings();
+      }
       return db.execute(table, action, data, where);
     } catch (error) {
       log.error('Database error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ============ SETTINGS OPERATIONS ============
+  ipcMain.handle('settings:getAll', async () => {
+    try {
+      return db.getSettings();
+    } catch (error) {
+      log.error('Get settings error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('settings:get', async (event, { key }) => {
+    try {
+      return db.getSetting(key);
+    } catch (error) {
+      log.error('Get setting error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('settings:update', async (event, { key, value }) => {
+    try {
+      return db.updateSetting(key, value);
+    } catch (error) {
+      log.error('Update setting error:', error);
       return { success: false, error: error.message };
     }
   });
