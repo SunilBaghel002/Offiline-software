@@ -7,7 +7,8 @@ import {
   Calendar,
   Download,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  FileSpreadsheet
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -24,6 +25,7 @@ import {
   Cell
 } from 'recharts';
 import { format, subDays, startOfWeek, addDays } from 'date-fns';
+import * as XLSX from 'xlsx';
 
 const ReportsPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -62,6 +64,83 @@ const ReportsPage = () => {
     );
   };
 
+  const exportToExcel = () => {
+    try {
+      const wb = XLSX.utils.book_new();
+      
+      if (reportType === 'daily' && dailyData) {
+        // Export daily sales summary
+        const summaryData = [{
+          'Date': format(selectedDate, 'yyyy-MM-dd'),
+          'Total Revenue': dailyData.sales?.total_revenue || 0,
+          'Total Orders': dailyData.sales?.total_orders || 0,
+          'Cash Amount': dailyData.sales?.cash_amount || 0,
+          'Card Amount': dailyData.sales?.card_amount || 0,
+          'UPI Amount': dailyData.sales?.upi_amount || 0,
+        }];
+        const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+        XLSX.utils.book_append_sheet(wb, summarySheet, 'Daily Summary');
+        
+        // Export orders
+        if (dailyData.orders?.length > 0) {
+          const ordersData = dailyData.orders.map(order => ({
+            'Order #': order.order_number,
+            'Time': new Date(order.created_at).toLocaleTimeString(),
+            'Type': order.order_type,
+            'Payment': order.payment_method,
+            'Amount': order.total_amount
+          }));
+          const ordersSheet = XLSX.utils.json_to_sheet(ordersData);
+          XLSX.utils.book_append_sheet(wb, ordersSheet, 'Orders');
+        }
+        
+        // Export top items
+        if (dailyData.topItems?.length > 0) {
+          const topItemsData = dailyData.topItems.map(item => ({
+            'Item Name': item.item_name,
+            'Quantity Sold': item.total_quantity,
+            'Revenue': item.total_revenue
+          }));
+          const topItemsSheet = XLSX.utils.json_to_sheet(topItemsData);
+          XLSX.utils.book_append_sheet(wb, topItemsSheet, 'Top Items');
+        }
+        
+        XLSX.writeFile(wb, `Daily_Report_${format(selectedDate, 'yyyy-MM-dd')}.xlsx`);
+      } else if (weeklyData.length > 0) {
+        // Export weekly data
+        const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+        const weeklyExportData = weeklyData.map(day => ({
+          'Date': day.date,
+          'Day': format(new Date(day.date), 'EEEE'),
+          'Total Revenue': day.total_revenue || 0,
+          'Total Orders': day.total_orders || 0,
+          'Total Tax': day.total_tax || 0,
+          'Total Discount': day.total_discount || 0
+        }));
+        
+        // Add totals row
+        weeklyExportData.push({
+          'Date': 'TOTAL',
+          'Day': '',
+          'Total Revenue': weeklyData.reduce((sum, d) => sum + (d.total_revenue || 0), 0),
+          'Total Orders': weeklyData.reduce((sum, d) => sum + (d.total_orders || 0), 0),
+          'Total Tax': weeklyData.reduce((sum, d) => sum + (d.total_tax || 0), 0),
+          'Total Discount': weeklyData.reduce((sum, d) => sum + (d.total_discount || 0), 0)
+        });
+        
+        const weeklySheet = XLSX.utils.json_to_sheet(weeklyExportData);
+        XLSX.utils.book_append_sheet(wb, weeklySheet, 'Weekly Summary');
+        
+        XLSX.writeFile(wb, `Weekly_Report_${format(weekStart, 'yyyy-MM-dd')}.xlsx`);
+      }
+      
+      alert('Report exported successfully!');
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Failed to export report: ' + error.message);
+    }
+  };
+
   const COLORS = ['var(--success-500)', 'var(--primary-500)', 'var(--secondary-500)'];
 
   const paymentData = dailyData?.sales ? [
@@ -95,6 +174,15 @@ const ReportsPage = () => {
             onClick={() => setReportType('weekly')}
           >
             Weekly
+          </button>
+          <button 
+            className="btn btn-secondary"
+            onClick={exportToExcel}
+            disabled={isLoading}
+            title="Export to Excel"
+          >
+            <FileSpreadsheet size={18} />
+            Export
           </button>
         </div>
       </div>
@@ -154,41 +242,58 @@ const DailyReport = ({ data, paymentData }) => {
   const orders = data?.orders || [];
   const topItems = data?.topItems || [];
 
-  const COLORS = ['#22c55e', '#3b82f6', '#f97316'];
+  const COLORS = ['#10b981', '#6366f1', '#f59e0b', '#ef4444'];
+  const GRADIENT_COLORS = {
+    primary: ['#6366f1', '#818cf8'],
+    success: ['#10b981', '#34d399'],
+    warning: ['#f59e0b', '#fbbf24'],
+  };
 
   return (
     <div>
       {/* Stats Grid */}
       <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon primary">
+        <div className="stat-card" style={{ 
+          background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)', 
+          color: 'white',
+          boxShadow: '0 10px 40px rgba(99, 102, 241, 0.3)'
+        }}>
+          <div className="stat-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
             <DollarSign size={24} />
           </div>
           <div>
             <div className="stat-value">₹{(sales.total_revenue || 0).toFixed(2)}</div>
-            <div className="stat-label">Total Revenue</div>
+            <div className="stat-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Total Revenue</div>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon success">
+        <div className="stat-card" style={{ 
+          background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)', 
+          color: 'white',
+          boxShadow: '0 10px 40px rgba(16, 185, 129, 0.3)'
+        }}>
+          <div className="stat-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
             <ShoppingCart size={24} />
           </div>
           <div>
             <div className="stat-value">{sales.total_orders || 0}</div>
-            <div className="stat-label">Total Orders</div>
+            <div className="stat-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Total Orders</div>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon warning">
+        <div className="stat-card" style={{ 
+          background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)', 
+          color: 'white',
+          boxShadow: '0 10px 40px rgba(245, 158, 11, 0.3)'
+        }}>
+          <div className="stat-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
             <TrendingUp size={24} />
           </div>
           <div>
             <div className="stat-value">
               ₹{sales.total_orders ? (sales.total_revenue / sales.total_orders).toFixed(2) : '0.00'}
             </div>
-            <div className="stat-label">Avg. Order Value</div>
+            <div className="stat-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Avg. Order Value</div>
           </div>
         </div>
       </div>
@@ -201,24 +306,54 @@ const DailyReport = ({ data, paymentData }) => {
         marginTop: 'var(--spacing-6)'
       }}>
         {/* Top Items */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Top Selling Items</h3>
+        <div className="card" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+          <div className="card-header" style={{ 
+            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+            borderBottom: '1px solid var(--gray-200)'
+          }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BarChart3 size={20} style={{ color: 'var(--primary-500)' }} />
+              Top Selling Items
+            </h3>
           </div>
-          <div className="card-body">
+          <div className="card-body" style={{ padding: 'var(--spacing-4)' }}>
             {topItems.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={topItems} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="item_name" type="category" width={120} />
+              <ResponsiveContainer width="100%" height={320}>
+                <BarChart data={topItems} layout="vertical" margin={{ left: 20, right: 30 }}>
+                  <defs>
+                    <linearGradient id="barGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#6366f1" />
+                      <stop offset="100%" stopColor="#a5b4fc" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis type="number" axisLine={false} tickLine={false} />
+                  <YAxis 
+                    dataKey="item_name" 
+                    type="category" 
+                    width={130} 
+                    axisLine={false} 
+                    tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 12 }}
+                  />
                   <Tooltip 
                     formatter={(value, name) => [
-                      name === 'total_quantity' ? value : `₹${value.toFixed(2)}`,
-                      name === 'total_quantity' ? 'Quantity' : 'Revenue'
+                      name === 'total_quantity' ? `${value} units` : `₹${value.toFixed(2)}`,
+                      name === 'total_quantity' ? 'Quantity Sold' : 'Revenue'
                     ]}
+                    contentStyle={{ 
+                      background: 'white', 
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    }}
                   />
-                  <Bar dataKey="total_quantity" fill="var(--primary-500)" />
+                  <Bar 
+                    dataKey="total_quantity" 
+                    fill="url(#barGradient)" 
+                    radius={[0, 6, 6, 0]}
+                    animationDuration={800}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -230,29 +365,61 @@ const DailyReport = ({ data, paymentData }) => {
         </div>
 
         {/* Payment Methods */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Payment Methods</h3>
+        <div className="card" style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+          <div className="card-header" style={{ 
+            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+            borderBottom: '1px solid var(--gray-200)'
+          }}>
+            <h3>💳 Payment Methods</h3>
           </div>
-          <div className="card-body">
+          <div className="card-body" style={{ padding: 'var(--spacing-4)' }}>
             {paymentData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={320}>
                 <PieChart>
+                  <defs>
+                    <linearGradient id="pieGradient1" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#10b981" />
+                      <stop offset="100%" stopColor="#059669" />
+                    </linearGradient>
+                    <linearGradient id="pieGradient2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366f1" />
+                      <stop offset="100%" stopColor="#4f46e5" />
+                    </linearGradient>
+                    <linearGradient id="pieGradient3" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f59e0b" />
+                      <stop offset="100%" stopColor="#d97706" />
+                    </linearGradient>
+                  </defs>
                   <Pie
                     data={paymentData}
                     cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
+                    cy="45%"
+                    innerRadius={55}
+                    outerRadius={95}
+                    paddingAngle={4}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    animationDuration={800}
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    labelLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
                   >
                     {paymentData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={`url(#pieGradient${(index % 3) + 1})`}
+                        stroke="white"
+                        strokeWidth={2}
+                      />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => `₹${value.toFixed(2)}`} />
+                  <Tooltip 
+                    formatter={(value) => [`₹${value.toFixed(2)}`, 'Amount']}
+                    contentStyle={{ 
+                      background: 'white', 
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -265,9 +432,12 @@ const DailyReport = ({ data, paymentData }) => {
       </div>
 
       {/* Orders Table */}
-      <div className="card" style={{ marginTop: 'var(--spacing-6)' }}>
-        <div className="card-header">
-          <h3>Orders Today</h3>
+      <div className="card" style={{ marginTop: 'var(--spacing-6)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+        <div className="card-header" style={{ 
+          background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+          borderBottom: '1px solid var(--gray-200)'
+        }}>
+          <h3>📋 Orders Today</h3>
         </div>
         <div className="table-container" style={{ border: 'none', borderRadius: 0 }}>
           <table className="table">
@@ -337,80 +507,153 @@ const WeeklyReport = ({ data, startDate }) => {
     <div>
       {/* Stats Grid */}
       <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon primary">
+        <div className="stat-card" style={{ 
+          background: 'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)', 
+          color: 'white',
+          boxShadow: '0 10px 40px rgba(99, 102, 241, 0.3)'
+        }}>
+          <div className="stat-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
             <DollarSign size={24} />
           </div>
           <div>
             <div className="stat-value">₹{totals.revenue.toFixed(2)}</div>
-            <div className="stat-label">Weekly Revenue</div>
+            <div className="stat-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Weekly Revenue</div>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon success">
+        <div className="stat-card" style={{ 
+          background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)', 
+          color: 'white',
+          boxShadow: '0 10px 40px rgba(16, 185, 129, 0.3)'
+        }}>
+          <div className="stat-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
             <ShoppingCart size={24} />
           </div>
           <div>
             <div className="stat-value">{totals.orders}</div>
-            <div className="stat-label">Total Orders</div>
+            <div className="stat-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Total Orders</div>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon warning">
+        <div className="stat-card" style={{ 
+          background: 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)', 
+          color: 'white',
+          boxShadow: '0 10px 40px rgba(245, 158, 11, 0.3)'
+        }}>
+          <div className="stat-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
             <TrendingUp size={24} />
           </div>
           <div>
             <div className="stat-value">
               ₹{totals.orders ? (totals.revenue / totals.orders).toFixed(2) : '0.00'}
             </div>
-            <div className="stat-label">Avg. Order Value</div>
+            <div className="stat-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Avg. Order Value</div>
           </div>
         </div>
       </div>
 
       {/* Revenue Chart */}
-      <div className="card" style={{ marginTop: 'var(--spacing-6)' }}>
-        <div className="card-header">
-          <h3>Daily Revenue</h3>
+      <div className="card" style={{ marginTop: 'var(--spacing-6)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+        <div className="card-header" style={{ 
+          background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+          borderBottom: '1px solid var(--gray-200)'
+        }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            📈 Daily Revenue Trend
+          </h3>
         </div>
-        <div className="card-body">
+        <div className="card-body" style={{ padding: 'var(--spacing-4)' }}>
           <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
+            <BarChart data={chartData} margin={{ left: 10, right: 10 }}>
+              <defs>
+                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#6366f1" />
+                  <stop offset="100%" stopColor="#a5b4fc" />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis 
+                dataKey="day" 
+                axisLine={false} 
+                tickLine={false}
+                tick={{ fill: '#64748b', fontSize: 12 }}
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false}
+                tick={{ fill: '#64748b', fontSize: 12 }}
+                tickFormatter={(value) => `₹${value}`}
+              />
               <Tooltip 
                 formatter={(value, name) => [
                   name === 'revenue' ? `₹${value.toFixed(2)}` : value,
                   name === 'revenue' ? 'Revenue' : 'Orders'
                 ]}
+                contentStyle={{ 
+                  background: 'white', 
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                }}
               />
-              <Bar dataKey="revenue" fill="var(--primary-500)" radius={[4, 4, 0, 0]} />
+              <Bar 
+                dataKey="revenue" 
+                fill="url(#revenueGradient)" 
+                radius={[8, 8, 0, 0]}
+                animationDuration={800}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* Orders Chart */}
-      <div className="card" style={{ marginTop: 'var(--spacing-6)' }}>
-        <div className="card-header">
-          <h3>Daily Orders</h3>
+      <div className="card" style={{ marginTop: 'var(--spacing-6)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+        <div className="card-header" style={{ 
+          background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+          borderBottom: '1px solid var(--gray-200)'
+        }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            📊 Daily Orders Trend
+          </h3>
         </div>
-        <div className="card-body">
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
-              <Tooltip />
+        <div className="card-body" style={{ padding: 'var(--spacing-4)' }}>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={chartData} margin={{ left: 10, right: 10 }}>
+              <defs>
+                <linearGradient id="ordersGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis 
+                dataKey="day" 
+                axisLine={false} 
+                tickLine={false}
+                tick={{ fill: '#64748b', fontSize: 12 }}
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false}
+                tick={{ fill: '#64748b', fontSize: 12 }}
+              />
+              <Tooltip
+                contentStyle={{ 
+                  background: 'white', 
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                }}
+              />
               <Line 
                 type="monotone" 
                 dataKey="orders" 
-                stroke="var(--success-500)" 
-                strokeWidth={2}
-                dot={{ fill: 'var(--success-500)' }}
+                stroke="#10b981" 
+                strokeWidth={3}
+                dot={{ fill: '#10b981', strokeWidth: 2, r: 5 }}
+                activeDot={{ r: 7, fill: '#10b981' }}
+                animationDuration={800}
               />
             </LineChart>
           </ResponsiveContainer>

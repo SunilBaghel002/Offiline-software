@@ -13,7 +13,8 @@ import {
   Printer,
   Check,
   Search,
-  Leaf
+  Leaf,
+  FileText
 } from 'lucide-react';
 
 const POSPage = () => {
@@ -129,20 +130,29 @@ const POSPage = () => {
               {filteredItems.map(item => (
                 <div
                   key={item.id}
-                  className={`menu-item-card ${item.is_vegetarian ? 'vegetarian' : ''}`}
+                  className={`menu-item-card ${item.is_vegetarian ? 'vegetarian' : 'non-vegetarian'}`}
                   onClick={() => handleAddToCart(item)}
                 >
-                  {item.is_vegetarian && (
-                    <Leaf 
-                      size={14} 
-                      style={{ 
-                        color: 'var(--success-500)', 
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px'
-                      }} 
-                    />
-                  )}
+                  {/* Veg/Non-Veg Indicator Box */}
+                  <div style={{ 
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    width: '16px',
+                    height: '16px',
+                    border: `2px solid ${item.is_vegetarian ? '#22c55e' : '#ef4444'}`,
+                    borderRadius: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <div style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: item.is_vegetarian ? '#22c55e' : '#ef4444'
+                    }} />
+                  </div>
                   <div className="menu-item-name">{item.name}</div>
                   <div className="menu-item-price">₹{item.price.toFixed(2)}</div>
                 </div>
@@ -326,6 +336,184 @@ const POSPage = () => {
   );
 };
 
+// Bill Preview Modal Component
+const BillPreviewModal = ({ order, onClose, onPrint }) => {
+  if (!order) return null;
+
+  const formatDate = (dateStr) => {
+    return new Date(dateStr).toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1001 }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ 
+        maxWidth: '400px', 
+        background: '#fff',
+        fontFamily: 'monospace'
+      }}>
+        <div className="modal-header">
+          <h3 className="modal-title">Bill Preview</h3>
+          <button className="btn btn-ghost btn-icon" onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="modal-body" style={{ padding: 0 }}>
+          {/* Bill Content */}
+          <div style={{ 
+            background: '#fafafa', 
+            padding: 'var(--spacing-4)', 
+            border: '1px dashed var(--gray-300)',
+            margin: 'var(--spacing-3)',
+            borderRadius: 'var(--radius-md)'
+          }}>
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: 'var(--spacing-3)' }}>
+              <h3 style={{ fontSize: 'var(--font-size-lg)', marginBottom: '4px' }}>
+                Restaurant POS
+              </h3>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-600)' }}>
+                {formatDate(order.created_at)}
+              </div>
+            </div>
+
+            <div style={{ 
+              borderTop: '1px dashed var(--gray-400)', 
+              borderBottom: '1px dashed var(--gray-400)',
+              padding: 'var(--spacing-2) 0',
+              marginBottom: 'var(--spacing-2)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-sm)' }}>
+                <span>Bill No:</span>
+                <strong>#{order.order_number}</strong>
+              </div>
+              {order.table_number && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-sm)' }}>
+                  <span>Table:</span>
+                  <span>{order.table_number}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-sm)' }}>
+                <span>Type:</span>
+                <span>{order.order_type?.replace('_', ' ').toUpperCase()}</span>
+              </div>
+              {order.customer_name && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--font-size-sm)' }}>
+                  <span>Customer:</span>
+                  <span>{order.customer_name}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Items */}
+            <div style={{ marginBottom: 'var(--spacing-2)' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                fontWeight: 600,
+                fontSize: 'var(--font-size-xs)',
+                borderBottom: '1px solid var(--gray-300)',
+                paddingBottom: '4px',
+                marginBottom: '4px'
+              }}>
+                <span>Item</span>
+                <span>Qty</span>
+                <span>Amount</span>
+              </div>
+              {order.items?.map((item, idx) => (
+                <div key={idx} style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between',
+                  fontSize: 'var(--font-size-sm)',
+                  padding: '2px 0'
+                }}>
+                  <span style={{ flex: 2 }}>{item.item_name}</span>
+                  <span style={{ flex: 0.5, textAlign: 'center' }}>{item.quantity}</span>
+                  <span style={{ flex: 1, textAlign: 'right' }}>₹{(item.item_total || 0).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Totals */}
+            <div style={{ 
+              borderTop: '1px dashed var(--gray-400)',
+              paddingTop: 'var(--spacing-2)',
+              fontSize: 'var(--font-size-sm)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Subtotal:</span>
+                <span>₹{(order.subtotal || 0).toFixed(2)}</span>
+              </div>
+              {order.tax_amount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Tax:</span>
+                  <span>₹{(order.tax_amount || 0).toFixed(2)}</span>
+                </div>
+              )}
+              {order.discount_amount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--success-600)' }}>
+                  <span>Discount:</span>
+                  <span>-₹{(order.discount_amount || 0).toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                fontWeight: 700,
+                fontSize: 'var(--font-size-lg)',
+                marginTop: 'var(--spacing-2)',
+                paddingTop: 'var(--spacing-2)',
+                borderTop: '2px solid var(--gray-900)'
+              }}>
+                <span>TOTAL:</span>
+                <span>₹{(order.total_amount || 0).toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Payment Info */}
+            {order.payment_method && (
+              <div style={{ 
+                textAlign: 'center', 
+                marginTop: 'var(--spacing-3)',
+                fontSize: 'var(--font-size-sm)',
+                color: 'var(--gray-600)'
+              }}>
+                Paid via {order.payment_method.toUpperCase()}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div style={{ 
+              textAlign: 'center', 
+              marginTop: 'var(--spacing-3)',
+              fontSize: 'var(--font-size-xs)',
+              color: 'var(--gray-500)'
+            }}>
+              Thank you for dining with us!
+            </div>
+          </div>
+        </div>
+
+        <div className="modal-footer" style={{ display: 'flex', gap: 'var(--spacing-2)' }}>
+          <button className="btn btn-secondary" style={{ flex: 1 }} onClick={onClose}>
+            Close
+          </button>
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={onPrint}>
+            <Printer size={18} />
+            Print Bill
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Payment Modal Component with Customer Info Step
 const PaymentModal = ({ total, onClose, onSuccess, userId }) => {
   const [step, setStep] = useState('customer'); // 'customer' or 'payment'
@@ -336,6 +524,9 @@ const PaymentModal = ({ total, onClose, onSuccess, userId }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderNumber, setOrderNumber] = useState(null);
+  const [orderId, setOrderId] = useState(null);
+  const [showBillPreview, setShowBillPreview] = useState(false);
+  const [viewingOrder, setViewingOrder] = useState(null);
 
   const cart = useCartStore();
 
@@ -376,6 +567,7 @@ const PaymentModal = ({ total, onClose, onSuccess, userId }) => {
         console.log('Printing receipt to customer...');
         await window.electronAPI.invoke('print:receipt', { order: completedOrder });
 
+        setOrderId(result.id);
         setOrderNumber(result.orderNumber);
         setOrderComplete(true);
       } else {
@@ -389,10 +581,34 @@ const PaymentModal = ({ total, onClose, onSuccess, userId }) => {
     }
   };
 
+  // View Bill handler
+  const handleViewBill = async () => {
+    try {
+      const order = await window.electronAPI.invoke('order:getById', { id: orderId });
+      setViewingOrder(order);
+      setShowBillPreview(true);
+    } catch (error) {
+      console.error('Failed to load order:', error);
+      alert('Failed to load bill: ' + error.message);
+    }
+  };
+
+  // Reprint Bill handler
+  const handleReprintBill = async () => {
+    try {
+      const order = await window.electronAPI.invoke('order:getById', { id: orderId });
+      await window.electronAPI.invoke('print:receipt', { order });
+      alert('Bill reprinted successfully!');
+    } catch (error) {
+      console.error('Failed to print:', error);
+      alert('Failed to print: ' + error.message);
+    }
+  };
+
   if (orderComplete) {
     return (
       <div className="modal-overlay">
-        <div className="modal" style={{ textAlign: 'center', padding: 'var(--spacing-8)' }}>
+        <div className="modal" style={{ textAlign: 'center', padding: 'var(--spacing-8)', maxWidth: '400px' }}>
           <div style={{
             width: '80px',
             height: '80px',
@@ -406,13 +622,45 @@ const PaymentModal = ({ total, onClose, onSuccess, userId }) => {
             <Check size={40} style={{ color: 'var(--success-500)' }} />
           </div>
           <h2 style={{ marginBottom: 'var(--spacing-2)' }}>Order Complete!</h2>
-          <p style={{ color: 'var(--gray-600)', marginBottom: 'var(--spacing-4)' }}>
+          <p style={{ color: 'var(--gray-600)', marginBottom: 'var(--spacing-2)' }}>
             Order #{orderNumber} has been placed successfully.
           </p>
-          <button className="btn btn-primary btn-lg" onClick={onSuccess}>
+          <p style={{ color: 'var(--gray-500)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--spacing-4)' }}>
+            KOT sent to kitchen • Receipt printed
+          </p>
+          
+          <div style={{ display: 'flex', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-3)' }}>
+            <button 
+              className="btn btn-secondary" 
+              style={{ flex: 1 }}
+              onClick={handleViewBill}
+            >
+              <FileText size={18} />
+              View Bill
+            </button>
+            <button 
+              className="btn btn-secondary" 
+              style={{ flex: 1 }}
+              onClick={handleReprintBill}
+            >
+              <Printer size={18} />
+              Reprint
+            </button>
+          </div>
+          
+          <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={onSuccess}>
             New Order
           </button>
         </div>
+
+        {/* Bill Preview Modal */}
+        {showBillPreview && viewingOrder && (
+          <BillPreviewModal 
+            order={viewingOrder} 
+            onClose={() => setShowBillPreview(false)}
+            onPrint={handleReprintBill}
+          />
+        )}
       </div>
     );
   }

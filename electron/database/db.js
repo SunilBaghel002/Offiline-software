@@ -367,23 +367,32 @@ class Database {
     const today = new Date().toISOString().split('T')[0];
     
     const results = this.execute(
-      `SELECT current_value FROM sequences WHERE sequence_name = 'order_number' AND date = ?`,
-      [today]
+      `SELECT current_value, date FROM sequences WHERE sequence_name = 'order_number'`
     );
     
     if (results.length > 0) {
-      const nextValue = results[0].current_value + 1;
-      this.run(
-        `UPDATE sequences SET current_value = ? WHERE sequence_name = 'order_number' AND date = ?`,
-        [nextValue, today]
-      );
-      return nextValue;
+      // Check if it's a new day - reset the counter
+      if (results[0].date !== today) {
+        this.run(
+          `UPDATE sequences SET current_value = 1, date = ? WHERE sequence_name = 'order_number'`,
+          [today]
+        );
+        return 1;
+      } else {
+        // Same day - increment
+        const nextValue = results[0].current_value + 1;
+        this.run(
+          `UPDATE sequences SET current_value = ? WHERE sequence_name = 'order_number'`,
+          [nextValue]
+        );
+        return nextValue;
+      }
     } else {
-      this.insert('sequences', {
-        sequence_name: 'order_number',
-        date: today,
-        current_value: 1,
-      });
+      // First order ever - create the sequence
+      this.run(
+        `INSERT OR REPLACE INTO sequences (sequence_name, current_value, date) VALUES ('order_number', 1, ?)`,
+        [today]
+      );
       return 1;
     }
   }
@@ -538,7 +547,7 @@ class Database {
       SELECT oi.*, o.order_number, o.table_number, o.order_type, o.created_at as order_time
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
-      WHERE oi.kot_status != 'served' AND o.status != 'cancelled'
+      WHERE oi.kot_status != 'served' AND o.status != 'cancelled' AND o.is_deleted = 0 AND oi.is_deleted = 0
       ORDER BY o.created_at ASC
     `);
   }
@@ -629,12 +638,12 @@ class Database {
   // ===== Reports =====
   getDailyReport(date) {
     const sales = this.execute(`SELECT * FROM daily_sales WHERE date = ?`, [date]);
-    const orders = this.execute(`SELECT * FROM orders WHERE DATE(created_at) = ? ORDER BY created_at DESC`, [date]);
+    const orders = this.execute(`SELECT * FROM orders WHERE DATE(created_at) = ? AND is_deleted = 0 ORDER BY created_at DESC`, [date]);
     const topItems = this.execute(`
       SELECT oi.item_name, SUM(oi.quantity) as total_quantity, SUM(oi.item_total) as total_revenue
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
-      WHERE DATE(o.created_at) = ? AND o.status = 'completed'
+      WHERE DATE(o.created_at) = ? AND o.status = 'completed' AND o.is_deleted = 0
       GROUP BY oi.item_name
       ORDER BY total_quantity DESC
       LIMIT 10
@@ -648,9 +657,23 @@ class Database {
   }
 
   getWeeklyReport(startDate) {
+    // Calculate directly from orders table for accuracy
     return this.execute(`
-      SELECT * FROM daily_sales 
-      WHERE date >= ? AND date < date(?, '+7 days')
+      SELECT 
+        DATE(created_at) as date,
+        COUNT(*) as total_orders,
+        SUM(total_amount) as total_revenue,
+        SUM(tax_amount) as total_tax,
+        SUM(discount_amount) as total_discount,
+        SUM(CASE WHEN payment_method = 'cash' THEN total_amount ELSE 0 END) as cash_amount,
+        SUM(CASE WHEN payment_method = 'card' THEN total_amount ELSE 0 END) as card_amount,
+        SUM(CASE WHEN payment_method = 'upi' THEN total_amount ELSE 0 END) as upi_amount
+      FROM orders 
+      WHERE DATE(created_at) >= ? 
+        AND DATE(created_at) < date(?, '+7 days')
+        AND status = 'completed'
+        AND is_deleted = 0
+      GROUP BY DATE(created_at)
       ORDER BY date ASC
     `, [startDate, startDate]);
   }

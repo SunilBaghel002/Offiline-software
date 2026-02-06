@@ -6,6 +6,7 @@ import { useAuthStore } from './stores/authStore';
 import LoginPage from './pages/LoginPage';
 import POSPage from './pages/POSPage';
 import MenuPage from './pages/MenuPage';
+import OrdersPage from './pages/OrdersPage';
 import InventoryPage from './pages/InventoryPage';
 import KOTPage from './pages/KOTPage';
 import ReportsPage from './pages/ReportsPage';
@@ -55,6 +56,7 @@ function App() {
               <InventoryPage />
             </ProtectedRoute>
           } />
+          <Route path="orders" element={<OrdersPage />} />
           <Route path="kot" element={<KOTPage />} />
           <Route path="reports" element={
             <ProtectedRoute allowedRoles={['admin']}>

@@ -411,23 +411,79 @@ const MenuItemModal = ({ item, categories, onClose, onSave }) => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 'var(--spacing-6)', marginTop: 'var(--spacing-2)' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.is_vegetarian}
-                  onChange={(e) => setFormData({ ...formData, is_vegetarian: e.target.checked })}
-                />
-                <span>Vegetarian</span>
-              </label>
+            {/* Veg/Non-Veg Toggle */}
+            <div className="input-group mb-4">
+              <label className="input-label">Item Type</label>
+              <div style={{ display: 'flex', gap: 'var(--spacing-2)' }}>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, is_vegetarian: true })}
+                  style={{
+                    flex: 1,
+                    padding: 'var(--spacing-3)',
+                    border: `2px solid ${formData.is_vegetarian ? '#22c55e' : 'var(--gray-300)'}`,
+                    borderRadius: 'var(--radius-md)',
+                    background: formData.is_vegetarian ? '#dcfce7' : 'white',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 'var(--spacing-2)'
+                  }}
+                >
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid #22c55e',
+                    borderRadius: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }} />
+                  </div>
+                  <span style={{ fontWeight: formData.is_vegetarian ? 600 : 400, color: '#166534' }}>Veg</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, is_vegetarian: false })}
+                  style={{
+                    flex: 1,
+                    padding: 'var(--spacing-3)',
+                    border: `2px solid ${!formData.is_vegetarian ? '#ef4444' : 'var(--gray-300)'}`,
+                    borderRadius: 'var(--radius-md)',
+                    background: !formData.is_vegetarian ? '#fef2f2' : 'white',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 'var(--spacing-2)'
+                  }}
+                >
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    border: '2px solid #ef4444',
+                    borderRadius: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} />
+                  </div>
+                  <span style={{ fontWeight: !formData.is_vegetarian ? 600 : 400, color: '#991b1b' }}>Non-Veg</span>
+                </button>
+              </div>
+            </div>
 
+            <div style={{ marginTop: 'var(--spacing-2)' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   checked={formData.is_available}
                   onChange={(e) => setFormData({ ...formData, is_available: e.target.checked })}
                 />
-                <span>Available</span>
+                <span>Available for sale</span>
               </label>
             </div>
           </div>

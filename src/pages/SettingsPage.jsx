@@ -265,49 +265,27 @@ const SettingsPage = () => {
           </div>
         </div>
 
-        {/* Cloud Sync Settings */}
-        <div className="card">
-          <div className="card-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
-              <Cloud size={20} />
-              <h3>Cloud Sync</h3>
+        {/* Offline Mode Notice */}
+        <div className="card" style={{ background: 'var(--success-50)', border: '1px solid var(--success-200)' }}>
+          <div className="card-body" style={{ textAlign: 'center', padding: 'var(--spacing-6)' }}>
+            <div style={{ 
+              width: '48px', 
+              height: '48px', 
+              borderRadius: '50%',
+              background: 'var(--success-100)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto var(--spacing-3)'
+            }}>
+              <Store size={24} style={{ color: 'var(--success-600)' }} />
             </div>
-          </div>
-          <div className="card-body">
-            <div className="input-group">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={settings.sync_enabled === 'true'}
-                  onChange={(e) => updateSetting('sync_enabled', e.target.checked ? 'true' : 'false')}
-                />
-                <span>Enable Cloud Sync</span>
-              </label>
-            </div>
-
-            <div className="input-group" style={{ marginTop: 'var(--spacing-4)' }}>
-              <label className="input-label">Cloud API URL</label>
-              <input
-                type="url"
-                className="input"
-                value={settings.cloud_api_url || ''}
-                onChange={(e) => updateSetting('cloud_api_url', e.target.value)}
-                placeholder="https://your-api-server.com"
-              />
-            </div>
-
-            <div className="input-group" style={{ marginTop: 'var(--spacing-4)' }}>
-              <label className="input-label">Sync Interval (milliseconds)</label>
-              <input
-                type="number"
-                className="input"
-                value={settings.sync_interval || '30000'}
-                onChange={(e) => updateSetting('sync_interval', e.target.value)}
-              />
-              <p className="text-xs text-muted" style={{ marginTop: 'var(--spacing-1)' }}>
-                How often to sync with cloud (default: 30000ms = 30 seconds)
-              </p>
-            </div>
+            <h3 style={{ color: 'var(--success-700)', marginBottom: 'var(--spacing-2)' }}>
+              Fully Offline Mode
+            </h3>
+            <p style={{ color: 'var(--success-600)', fontSize: 'var(--font-size-sm)' }}>
+              This POS system works completely offline. All data is stored locally on this device.
+            </p>
           </div>
         </div>
       </div>

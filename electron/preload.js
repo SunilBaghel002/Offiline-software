@@ -18,6 +18,7 @@ const validInvokeChannels = [
   // Orders
   'order:create',
   'order:update',
+  'order:updateItem',
   'order:getActive',
   'order:getAll',
   'order:getById',
@@ -43,10 +44,6 @@ const validInvokeChannels = [
   'print:receipt',
   'print:kot',
   'print:testPrint',
-  // Sync
-  'sync:status',
-  'sync:forceSync',
-  'sync:getPending',
   // Settings
   'settings:getAll',
   'settings:get',
@@ -59,8 +56,6 @@ const validInvokeChannels = [
 const validOnChannels = [
   'update:available',
   'update:downloaded',
-  'sync:statusChanged',
-  'network:statusChanged',
 ];
 
 // Expose protected APIs to renderer

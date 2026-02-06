@@ -4,7 +4,6 @@ const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 const { Database } = require('./database/db');
 const AuthService = require('./services/auth.service');
-const SyncService = require('./services/sync.service');
 const PrinterService = require('./services/printer.service');
 
 // Configure logging
@@ -16,7 +15,6 @@ let mainWindow = null;
 let tray = null;
 let db = null;
 let authService = null;
-let syncService = null;
 let printerService = null;
 
 // Determine if in development mode
@@ -117,15 +115,11 @@ async function initializeServices() {
   db = new Database();
   await db.initialize();
   
-  // Initialize services
+  // Initialize services (fully offline - no sync)
   authService = new AuthService(db);
-  syncService = new SyncService(db);
   printerService = new PrinterService();
   
-  // Start sync service (it will auto-detect network status)
-  syncService.initialize();
-  
-  log.info('Services initialized successfully');
+  log.info('Services initialized successfully (offline mode)');
 }
 
 function setupIpcHandlers() {
@@ -317,9 +311,52 @@ function setupIpcHandlers() {
 
   ipcMain.handle('order:delete', async (event, { id }) => {
     try {
-      return db.deleteOrder(id);
+      // First get the order details to subtract from daily_sales
+      const order = db.execute('SELECT * FROM orders WHERE id = ?', [id])[0];
+      
+      if (order && order.status === 'completed') {
+        // Get the date of the order
+        const orderDate = order.created_at.split('T')[0];
+        
+        // Subtract from daily_sales
+        db.run(`
+          UPDATE daily_sales 
+          SET total_orders = total_orders - 1,
+              total_revenue = total_revenue - ?,
+              total_tax = total_tax - ?,
+              total_discount = total_discount - ?,
+              cash_amount = CASE WHEN ? = 'cash' THEN cash_amount - ? ELSE cash_amount END,
+              card_amount = CASE WHEN ? = 'card' THEN card_amount - ? ELSE card_amount END,
+              upi_amount = CASE WHEN ? = 'upi' THEN upi_amount - ? ELSE upi_amount END
+          WHERE date = ?
+        `, [
+          order.total_amount || 0,
+          order.tax_amount || 0,
+          order.discount_amount || 0,
+          order.payment_method, order.total_amount || 0,
+          order.payment_method, order.total_amount || 0,
+          order.payment_method, order.total_amount || 0,
+          orderDate
+        ]);
+      }
+      
+      // Soft delete by marking as deleted
+      db.run(`UPDATE orders SET is_deleted = 1, updated_at = ? WHERE id = ?`, 
+        [new Date().toISOString(), id]);
+      db.run(`UPDATE order_items SET is_deleted = 1 WHERE order_id = ?`, [id]);
+      return { success: true };
     } catch (error) {
       log.error('Delete order error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('order:updateItem', async (event, { id, updates }) => {
+    try {
+      db.update('order_items', updates, { id });
+      return { success: true };
+    } catch (error) {
+      log.error('Update order item error:', error);
       return { success: false, error: error.message };
     }
   });
@@ -522,9 +559,6 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   // Cleanup
-  if (syncService) {
-    syncService.stop();
-  }
   if (db) {
     db.close();
   }
