@@ -114,7 +114,8 @@ CREATE TABLE IF NOT EXISTS order_items (
     kot_status TEXT CHECK(kot_status IN ('pending', 'preparing', 'ready', 'served')) DEFAULT 'pending',
     kot_printed_at TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    is_deleted INTEGER DEFAULT 0
 );
 
 -- Sync Queue (Offline-First Architecture)

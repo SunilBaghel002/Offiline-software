@@ -578,7 +578,7 @@ const OrderEditModal = ({ order, onClose, onSave }) => {
     setIsSaving(true);
 
     try {
-      // Update order details
+      // Update order details and totals only (no individual item updates)
       await window.electronAPI.invoke('order:update', {
         id: order.id,
         updates: {
@@ -589,18 +589,6 @@ const OrderEditModal = ({ order, onClose, onSave }) => {
           discount_amount: parseFloat(formData.discount_amount) || 0
         }
       });
-      
-      // Update each item's quantity and price
-      for (const item of items) {
-        await window.electronAPI.invoke('order:updateItem', {
-          id: item.id,
-          updates: {
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-            item_total: item.unit_price * item.quantity
-          }
-        });
-      }
       
       onSave();
     } catch (error) {

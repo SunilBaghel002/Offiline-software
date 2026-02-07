@@ -53,9 +53,24 @@ class Database {
     
     // Execute schema SQL
     this.db.run(schema);
+
+    // Run migrations for existing databases
+    this.migrateSchema();
     
     // Save to disk
     this.save();
+  }
+
+  migrateSchema() {
+    try {
+      // Add is_deleted to order_items if missing
+      this.db.run("ALTER TABLE order_items ADD COLUMN is_deleted INTEGER DEFAULT 0");
+    } catch (error) {
+      // Column likely already exists, ignore error
+      if (!error.message.includes("duplicate column name")) {
+        console.log('Migration note:', error.message);
+      }
+    }
   }
 
   save() {
