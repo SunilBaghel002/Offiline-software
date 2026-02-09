@@ -3112,3 +3112,46 @@ h4 { font-size: var(--font-size-lg); }
   color: #D32F2F;
   font-weight: 600;
 }
+
+/* POS Bill Sheet - Constrained to Cart Width */
+/* POS Bill Sheet - Constrained to Cart Width & Non-blocking */
+.pos-sheet-overlay {
+  display: none; /* Removed to allow interaction with left side */
+}
+
+.pos-bottom-sheet {
+  position: absolute; /* Changed to absolute to stay inside relative parent if needed, or fixed */
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 480px; /* Match Cart Panel Width */
+  background: white;
+  z-index: 40; /* Lower than modals but above cart content */
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-bottom-sheet.active {
+  transform: translateY(0);
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  border: 3px solid rgba(211, 47, 47, 0.1);
+  border-left-color: #D32F2F;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

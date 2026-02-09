@@ -295,9 +295,18 @@ const POSPage = () => {
 
   if (isLoading) {
     return (
-      <div className="empty-state">
-        <div className="loading-spinner" />
-        <p className="mt-4">Loading menu...</p>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        height: '100vh', 
+        background: '#f5f5f5',
+        color: '#546E7A'
+      }}>
+        <div className="loading-spinner" style={{ width: '48px', height: '48px', borderWidth: '4px' }}></div>
+        <p style={{ marginTop: '16px', fontWeight: '600', fontSize: '18px' }}>Loading POS System...</p>
+        <p style={{ fontSize: '14px', color: '#90A4AE' }}>Getting things ready for you</p>
       </div>
     );
   }
@@ -972,63 +981,7 @@ const AddonSelectionModal = ({ item, onClose, onAddToCart }) => {
   );
 };
 
-// Held Orders Modal
-const HeldOrdersModal = ({ orders, onClose, onResume }) => {
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-           <h3 className="modal-title">Held Orders</h3>
-           <button className="btn btn-ghost btn-icon" onClick={onClose}>
-             <X size={20} />
-           </button>
-        </div>
-        
-        <div className="modal-body" style={{ overflowY: 'auto' }}>
-           {orders.length === 0 ? (
-             <div className="empty-state">
-                <Clock size={48} className="text-gray-300" />
-                <p>No held orders found</p>
-             </div>
-           ) : (
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {orders.map(order => (
-                   <div key={order.id} style={{ border: '1px solid var(--gray-200)', borderRadius: '8px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white' }}>
-                      <div>
-                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
-                            <span className="badge badge-warning">#{order.order_number}</span>
-                            <span className="font-bold">{order.order_type.toUpperCase()}</span>
-                            {order.table_number && <span className="text-gray-600">Table: {order.table_number}</span>}
-                         </div>
-                         <div className="text-sm text-gray-500">
-                            {new Date(order.created_at).toLocaleString()}
-                         </div>
-                         {order.customer_name && (
-                            <div className="font-medium mt-1">Customer: {order.customer_name}</div>
-                         )}
-                         <div className="text-sm text-gray-400 mt-1">
-                            {order.items ? order.items.length : 0} items
-                         </div>
-                      </div>
-                      
-                      <div style={{ textAlign: 'right' }}>
-                         <div className="text-xl font-bold text-primary-600 mb-2">₹{order.total_amount.toFixed(2)}</div>
-                         <button 
-                           className="btn btn-primary"
-                           onClick={() => onResume(order)}
-                         >
-                            <PlayCircle size={16} /> Resume
-                         </button>
-                      </div>
-                   </div>
-                ))}
-             </div>
-           )}
-        </div>
-      </div>
-    </div>
-  );
-};
+// HeldOrdersModal was defined here but is now defined at the end of the file. Removing duplicate.
 
 
 
@@ -1933,3 +1886,49 @@ const DiscountModal = ({ onClose, onApply, onClear, currentType, currentValue, s
 };
 
 export default POSPage;
+
+// Held Orders Modal
+const HeldOrdersModal = ({ orders, onClose, onResume }) => {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '600px', maxHeight: '80vh' }}>
+        <div className="modal-header" style={{ background: '#37474F', color: 'white' }}>
+          <h3 className="modal-title" style={{ color: 'white' }}>Held Orders</h3>
+          <button className="modal-close-btn" onClick={onClose} style={{ color: 'white' }}><X size={20} /></button>
+        </div>
+        <div className="modal-body" style={{ padding: '0' }}>
+          {orders.length === 0 ? (
+            <div className="empty-state" style={{ padding: '40px' }}>
+              <PauseCircle size={48} color="#CFD8DC" />
+              <p>No held orders found</p>
+            </div>
+          ) : (
+            <div className="held-orders-list">
+              {orders.map(order => (
+                <div key={order.id} style={{ padding: '16px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 'bold', fontSize: '16px' }}>Order #{order.order_number}</div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      {new Date(order.created_at).toLocaleTimeString()} • {order.items.length} Items
+                    </div>
+                    {order.customer_phone && <div style={{ fontSize: '12px', color: '#1976D2' }}>Customer: {order.customer_phone}</div>}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#D32F2F' }}>₹{order.total_amount.toFixed(2)}</div>
+                    <button 
+                      onClick={() => onResume(order)}
+                      className="btn btn-primary"
+                      style={{ marginTop: '8px', padding: '4px 12px', fontSize: '12px' }}
+                    >
+                      Resume
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
