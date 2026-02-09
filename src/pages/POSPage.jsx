@@ -40,6 +40,7 @@ import {
   Menu,
   ChevronDown
 } from 'lucide-react';
+import MainSidebar from '../components/layout/MainSidebar';
 
 const POSPage = () => {
   const [categories, setCategories] = useState([]);
@@ -60,6 +61,7 @@ const POSPage = () => {
   const [showCustomerForm, setShowCustomerForm] = useState(false);
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [showBillSheet, setShowBillSheet] = useState(false);
+  const [showMainSidebar, setShowMainSidebar] = useState(false);
 
   const { user } = useAuthStore();
   const cart = useCartStore();
@@ -118,9 +120,29 @@ const POSPage = () => {
     }
   };
 
-  const handleCheckout = () => {
-    if (cart.items.length > 0) {
-      setShowPayment(true);
+  const handleCheckout = async () => {
+    if (cart.items.length === 0) return;
+    
+    // Direct Checkout: Create Order -> KOT -> Print -> Clear
+    if (window.confirm('Confirm Order & Send to Kitchen?')) {
+        try {
+            const result = await cart.createOrder(user?.id);
+            if (result.success) {
+                // 1. KOT
+                // 2. Print Receipt
+                // 3. Clear Cart (done in createOrder)
+                // 4. Alert/Notify
+                 const order = await window.electronAPI.invoke('order:getById', { id: result.id });
+                 await window.electronAPI.invoke('print:kot', { order: order, items: order.items });
+                 alert(`Order #${result.orderNumber} Placed Successfully!`);
+                 loadData(); 
+            } else {
+                 alert('Order Failed: ' + result.error);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Error processing order');
+        }
     }
   };
 
@@ -282,16 +304,16 @@ const POSPage = () => {
 
   return (
     <div className="pos-fullscreen">
-      {/* Header Bar */}
+      {/* Header Bar - Strict PetPooja Design */}
       <div className="pos-header-bar">
         <div className="pos-header-left">
-          <button className="pos-header-btn" style={{ border: 'none', padding: 0 }}>
-             <Menu size={24} color="#37474F" />
+          <button 
+            className="pos-header-menu-btn" 
+            onClick={() => setShowMainSidebar(true)}
+          >
+             <Menu size={24} color="#546E7A" />
           </button>
           <div className="pos-logo-text">PetPooja</div>
-          <button className="pos-new-order-btn" onClick={handleNewOrder}>
-            New Order
-          </button>
         </div>
         
         <div className="pos-search-wrapper">
@@ -299,24 +321,28 @@ const POSPage = () => {
              <Search size={18} color="#90A4AE" />
              <input 
                type="text" 
-               placeholder="Search item" 
+               placeholder="Search by Item Name / Short Code" 
                value={searchQuery}
                onChange={(e) => setSearchQuery(e.target.value)}
              />
           </div>
-          <div className="pos-search-box" style={{ maxWidth: '150px' }}>
-             <input type="text" placeholder="Short Code" />
-          </div>
         </div>
 
         <div className="pos-header-right">
-          <div style={{ border: '1px solid #ccc', borderRadius: '4px', padding: '4px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: '10px' }}>
-             <span style={{ fontSize: '10px', color: '#666' }}>Call For Support</span>
-             <span style={{ fontWeight: 'bold', fontSize: '12px' }}>9099912483</span>
+          <button className="pos-new-order-btn" onClick={handleNewOrder}>
+            New Order
+          </button>
+          
+          <div className="pos-support-box">
+             <span>Support</span>
+             <strong>9099912483</strong>
           </div>
-          <button className="pos-header-btn" title="Sync"><RefreshCw size={20} /></button>
-          <button className="pos-header-btn"><Keyboard size={20} /></button>
-          <button className="pos-header-btn"><User size={20} /></button>
+          
+          <div className="pos-header-actions">
+            <button className="pos-header-icon-btn" title="Sync"><RefreshCw size={20} /></button>
+            <button className="pos-header-icon-btn" title="Keyboard Shortcuts"><Keyboard size={20} /></button>
+            <button className="pos-header-icon-btn" title="User Profile"><User size={20} /></button>
+          </div>
         </div>
       </div>
 
@@ -332,7 +358,7 @@ const POSPage = () => {
                 onClick={() => setSelectedCategory(null)}
             >
                 <div className="pos-category-icon-wrapper" style={{ marginBottom: '4px' }}>
-                  <ClipboardList size={24} />
+                  <ClipboardList size={32} />
                 </div>
                 <span>All Items</span>
             </div>
@@ -340,16 +366,16 @@ const POSPage = () => {
               // Helper to get icon based on category name
               const getIcon = (name) => {
                 const n = name.toLowerCase();
-                if (n.includes('pizza')) return <Pizza size={24} />;
-                if (n.includes('coffee') || n.includes('tea') || n.includes('beverage')) return <Coffee size={24} />;
-                if (n.includes('ice') || n.includes('dessert')) return <IceCream size={24} />;
-                if (n.includes('sandwich') || n.includes('burger')) return <Sandwich size={24} />;
-                if (n.includes('soup')) return <Soup size={24} />;
-                if (n.includes('veg') || n.includes('salad')) return <Carrot size={24} />;
-                if (n.includes('chicken') || n.includes('beef') || n.includes('meat')) return <Beef size={24} />;
-                if (n.includes('cake') || n.includes('pastry')) return <Cake size={24} />;
-                if (n.includes('beer') || n.includes('alcohol')) return <Beer size={24} />;
-                return <Utensils size={24} />;
+                if (n.includes('pizza')) return <Pizza size={32} />;
+                if (n.includes('coffee') || n.includes('tea') || n.includes('beverage')) return <Coffee size={32} />;
+                if (n.includes('ice') || n.includes('dessert')) return <IceCream size={32} />;
+                if (n.includes('sandwich') || n.includes('burger')) return <Sandwich size={32} />;
+                if (n.includes('soup')) return <Soup size={32} />;
+                if (n.includes('veg') || n.includes('salad')) return <Carrot size={32} />;
+                if (n.includes('chicken') || n.includes('beef') || n.includes('meat')) return <Beef size={32} />;
+                if (n.includes('cake') || n.includes('pastry')) return <Cake size={32} />;
+                if (n.includes('beer') || n.includes('alcohol')) return <Beer size={32} />;
+                return <Utensils size={32} />;
               };
 
               return (
@@ -379,12 +405,13 @@ const POSPage = () => {
                       </div>
                     </div>
                   ))
+
               ) : (
-                    <div className="pos-empty-state" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', color: 'var(--gray-400)' }}>
-                      <div style={{ background: 'var(--gray-100)', padding: '20px', borderRadius: '50%', marginBottom: '16px' }}>
-                        <UtensilsCrossed size={48} style={{ opacity: 0.5 }} />
+                    <div className="pos-empty-state">
+                      <div className="pos-empty-state-icon">
+                        <UtensilsCrossed size={48} />
                       </div>
-                      <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--gray-600)', marginBottom: '4px' }}>No Items Found</h3>
+                      <h3>No Items Found</h3>
                       <p>Try selecting a different category or search term</p>
                     </div>
               )}
@@ -417,21 +444,20 @@ const POSPage = () => {
           </div>
 
           {/* Customer Info Section - Icon Bar */}
-          <div className="pos-customer-bar" style={{ display: 'flex', background: '#ECEFF1', borderBottom: '1px solid #CFD8DC' }}>
-             <div style={{ display: 'flex', gap: '1px', flex: 1 }}>
-                <button className="pos-header-btn" style={{ flex: 1, height: '40px', background: 'white', border: '1px solid #CFD8DC' }} title="Table"><Plus size={18} /> T1</button>
+          <div className="pos-customer-bar">
+             <div className="pos-customer-bar-actions">
+                <button className="pos-header-btn" title="Table"><Plus size={18} /> T1</button>
                 <button 
                   className={`pos-header-btn ${showCustomerForm ? 'active' : ''}`}
-                  style={{ flex: 1, background: showCustomerForm ? '#E0F7FA' : 'white', border: '1px solid #CFD8DC' }} 
                   title="Customer"
                   onClick={() => setShowCustomerForm(!showCustomerForm)}
                 >
                   <User size={18} />
                 </button>
-                <button className="pos-header-btn" style={{ flex: 1, background: 'white', border: '1px solid #CFD8DC' }} title="Waiter"><User size={18} /></button>
-                <button className="pos-header-btn" style={{ flex: 1, background: 'white', border: '1px solid #CFD8DC' }} title="Notes"><FileText size={18} /></button>
+                <button className="pos-header-btn" title="Waiter"><User size={18} /></button>
+                <button className="pos-header-btn" title="Notes"><FileText size={18} /></button>
              </div>
-             <div style={{ width: '80px', background: '#FFC107', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px' }}>
+             <div className="pos-order-mode-badge">
                 Outdoor
              </div>
           </div>
@@ -540,78 +566,78 @@ const POSPage = () => {
           {/* Cart Total & Actions */}
           <div className="pos-cart-footer">
              {/* Billing Breakdown */}
-             <div className="pos-billing-section">
-               <div className="pos-billing-ctrl-row">
-                 <button 
-                   className="pos-toggle-btn"
-                   onClick={() => setShowDiscountModal(true)}
-                   style={{ color: '#1565C0', borderColor: '#90CAF9', background: '#E3F2FD' }}
-                 >
-                   <Percent size={14} /> Discount
-                 </button>
-                 
-                 <label className={`pos-toggle-btn ${cart.isComplimentary ? 'active' : ''}`}>
-                   <input 
-                     type="checkbox" 
-                     checked={cart.isComplimentary}
-                     onChange={(e) => cart.setIsComplimentary(e.target.checked)}
-                   />
-                   <span>Complimentary</span>
-                 </label>
-
-                 <label className={`pos-toggle-btn ${cart.isSalesReturn ? 'active' : ''}`}>
-                   <input 
-                     type="checkbox" 
-                     checked={cart.isSalesReturn}
-                     onChange={(e) => cart.setIsSalesReturn(e.target.checked)}
-                   />
-                   <span>Return</span>
-                 </label>
-               </div>
-
-               {/* Breakdown */}
-               <div className="pos-billing-row">
-                  <span>Subtotal</span>
-                  <span>₹{cart.getSubtotal().toFixed(2)}</span>
+             {/* Strict Design Bill Breakdown - Matches pos2.jpeg */ }
+             <div className="pos-bill-breakdown">
+               <div className="pos-bill-row">
+                  <span className="pos-bill-label">Sub Total</span>
+                  <span className="pos-bill-value">₹{cart.getSubtotal().toFixed(2)}</span>
                </div>
                
-               {/* Discount if applied */}
                {cart.getDiscountAmount() > 0 && (
-                 <div className="pos-billing-row" style={{ color: '#43A047' }}>
-                    <span>Discount ({cart.discountType === 'percentage' ? `${cart.discountValue}%` : 'Flat'})</span>
-                    <span>-₹{cart.getDiscountAmount().toFixed(2)}</span>
+                 <div className="pos-bill-row discount">
+                    <span className="pos-bill-label">Discount ({cart.discountType === 'percentage' ? `${cart.discountValue}%` : 'Flat'})</span>
+                    <span className="pos-bill-value">- ₹{cart.getDiscountAmount().toFixed(2)}</span>
                  </div>
                )}
 
-               {/* Metadata for Taxes */}
-               <div className="pos-billing-row">
-                  <span>CGST (2.5%)</span>
-                  <span>₹{cart.getTaxBreakdown().cgst.toFixed(2)}</span>
-               </div>
-               <div className="pos-billing-row">
-                  <span>SGST (2.5%)</span>
-                  <span>₹{cart.getTaxBreakdown().sgst.toFixed(2)}</span>
+               <div className="pos-bill-row">
+                  <span className="pos-bill-label">SGST 2.5%</span>
+                  <span className="pos-bill-value">₹{cart.getTaxBreakdown().sgst.toFixed(2)}</span>
                </div>
 
-               {/* Service Charge */}
+               <div className="pos-bill-row">
+                  <span className="pos-bill-label">CGST 2.5%</span>
+                  <span className="pos-bill-value">₹{cart.getTaxBreakdown().cgst.toFixed(2)}</span>
+               </div>
+
                {cart.getServiceCharge() > 0 && (
-                 <div className="pos-billing-row">
-                    <span>Service Charge ({cart.serviceChargePercent}%)</span>
-                    <span>₹{cart.getServiceCharge().toFixed(2)}</span>
+                 <div className="pos-bill-row">
+                    <span className="pos-bill-label">Service Charge ({cart.serviceChargePercent}%)</span>
+                    <span className="pos-bill-value">₹{cart.getServiceCharge().toFixed(2)}</span>
                  </div>
                )}
 
-               {/* Total */}
-               <div className="pos-billing-row total-row">
-                  <span>Total Payable</span>
-                  <span style={{ fontSize: '20px', color: '#D32F2F' }}>₹{cart.getGrandTotal().toFixed(2)}</span>
-                  <button 
-                    onClick={() => setShowBillSheet(true)}
-                    style={{ background: '#ECEFF1', border: '1px solid #CFD8DC', borderRadius: '4px', cursor: 'pointer', color: '#546E7A', padding: '4px', display: 'flex', alignItems: 'center', marginLeft: '8px' }}
-                    title="View Breakdown"
-                  >
-                    <ChevronDown size={20} style={{ transform: 'rotate(180deg)' }} />
-                  </button>
+               <div className="pos-bill-divider"></div>
+
+               <div className="pos-bill-total-row">
+                  <span className="pos-bill-total-label">Grand Total</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="pos-bill-total-value">₹{cart.getGrandTotal().toFixed(2)}</span>
+                    <button 
+                      onClick={() => setShowBillSheet(true)}
+                      style={{ background: '#ECEFF1', border: '1px solid #CFD8DC', borderRadius: '4px', cursor: 'pointer', color: '#546E7A', padding: '4px', display: 'flex', alignItems: 'center' }}
+                      title="View Detailed Bill"
+                    >
+                      <ChevronDown size={20} />
+                    </button>
+                  </div>
+               </div>
+               
+               <div className="pos-bill-controls">
+                 <button 
+                   className="pos-bill-toggle-btn"
+                   onClick={() => setShowDiscountModal(true)}
+                 >
+                   <Percent size={14} /> Add Discount
+                 </button>
+                 <div className="pos-bill-toggles">
+                    <label className={`pos-bill-checkbox ${cart.isComplimentary ? 'checked' : ''}`}>
+                      <input 
+                        type="checkbox" 
+                        checked={cart.isComplimentary}
+                        onChange={(e) => cart.setIsComplimentary(e.target.checked)}
+                      />
+                      <span>Complimentary</span>
+                    </label>
+                    <label className={`pos-bill-checkbox ${cart.isSalesReturn ? 'checked' : ''}`}>
+                      <input 
+                        type="checkbox" 
+                        checked={cart.isSalesReturn}
+                        onChange={(e) => cart.setIsSalesReturn(e.target.checked)}
+                      />
+                      <span>Return</span>
+                    </label>
+                 </div>
                </div>
              </div>
 
@@ -657,6 +683,10 @@ const POSPage = () => {
                <button className="pos-action-btn btn-hold" onClick={handleHoldOrder}>
                   <PauseCircle size={18} style={{ marginBottom: '4px' }} />
                   Hold
+               </button>
+               <button className="pos-action-btn btn-secondary" onClick={() => setShowHeldOrders(true)} title="View Held Orders">
+                  <ClipboardList size={18} style={{ marginBottom: '4px' }} />
+                  Recall
                </button>
              </div>
           </div>
@@ -760,22 +790,55 @@ const POSPage = () => {
                 <span>₹{cart.getTaxAmount().toFixed(2)}</span>
              </div>
              
-             {/* Extra Fields as per design description */}
-             <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', color: '#666', fontSize: '14px' }}>
+             {/* Editable Fields */}
+             <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', color: '#666', fontSize: '14px' }}>
                 <span>Container Charge</span>
-                <span>₹0.00</span>
+                <input 
+                    type="number" 
+                    placeholder="0"
+                    style={{ width: '80px', textAlign: 'right', border: '1px solid #ddd', padding: '4px', borderRadius: '4px' }}
+                />
              </div>
-             <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', color: '#666', fontSize: '14px' }}>
+             <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', color: '#666', fontSize: '14px' }}>
                 <span>Delivery Charge</span>
-                <span>₹0.00</span>
+                 <input 
+                    type="number" 
+                    value={cart.deliveryCharge || ''}
+                    onChange={(e) => cart.setDeliveryCharge(parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                    style={{ width: '80px', textAlign: 'right', border: '1px solid #ddd', padding: '4px', borderRadius: '4px' }}
+                />
              </div>
 
              <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed #ddd', fontWeight: 'bold', fontSize: '20px', color: '#D32F2F' }}>
                 <span>Grand Total</span>
                 <span>₹{cart.getGrandTotal().toFixed(2)}</span>
              </div>
+
+             {/* Return Calculation */}
+             <div style={{ marginTop: '20px', padding: '16px', background: '#E0F2F1', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: '600', color: '#00695C' }}>Customer Paid</span>
+                    <input 
+                        type="number" 
+                        value={cart.customerPaid || ''}
+                        onChange={(e) => cart.setCustomerPaid(parseFloat(e.target.value) || 0)}
+                        placeholder="Amount"
+                        style={{ width: '100px', textAlign: 'right', border: '1px solid #80CBC4', padding: '6px', borderRadius: '4px', fontWeight: 'bold' }}
+                    />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#004D40', fontWeight: 'bold' }}>
+                    <span>Return to Customer</span>
+                    <span style={{ fontSize: '18px' }}>
+                        ₹{Math.max(0, (cart.customerPaid || 0) - cart.getGrandTotal()).toFixed(2)}
+                    </span>
+                </div>
+             </div>
           </div>
       </div>
+      
+      {/* Main Sidebar Overlay */}
+      <MainSidebar isOpen={showMainSidebar} onClose={() => setShowMainSidebar(false)} />
 
     </div>
   );
@@ -1694,6 +1757,28 @@ const PaymentModal = ({ total, onClose, onSuccess, userId }) => {
           )}
         </div>
       </div>
+      {/* Modals & Overlays */}
+      <MainSidebar 
+        isOpen={showMainSidebar} 
+        onClose={() => setShowMainSidebar(false)} 
+      />
+
+      {showDiscountModal && (
+        <DiscountModal 
+          currentType={cart.discountType || 'percentage'} 
+          currentValue={cart.discountValue || 0}
+          subtotal={cart.getSubtotal()}
+          onApply={(type, val, reason) => {
+             cart.applyDiscount(type, val, reason);
+             setShowDiscountModal(false);
+          }}
+          onClear={() => {
+             cart.clearDiscount();
+             setShowDiscountModal(false);
+          }}
+          onClose={() => setShowDiscountModal(false)}
+        />
+      )}
     </div>
   );
 };

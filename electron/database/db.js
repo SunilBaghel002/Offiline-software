@@ -92,6 +92,12 @@ class Database {
       this.db.run("ALTER TABLE order_items ADD COLUMN addons TEXT");
     } catch (error) { if (!error.message.includes("duplicate column name")) console.log('Migration note:', error.message); }
 
+    try {
+       // Add delivery_charge and customer_paid to orders
+       this.db.run("ALTER TABLE orders ADD COLUMN delivery_charge REAL DEFAULT 0");
+       this.db.run("ALTER TABLE orders ADD COLUMN customer_paid REAL DEFAULT 0");
+    } catch (error) { if (!error.message.includes("duplicate column name")) console.log('Migration note:', error.message); }
+
     // Migrate orders table to support 'held' status in CHECK constraint
     this.migrateOrdersTableForHeldStatus();
 
@@ -516,6 +522,8 @@ class Database {
       subtotal: order.subtotal || 0,
       tax_amount: order.tax_amount || 0,
       discount_amount: order.discount_amount || 0,
+      delivery_charge: order.delivery_charge || 0,
+      customer_paid: order.customer_paid || 0,
       total_amount: order.total_amount || 0,
       notes: order.notes || '',
       status: order.status || 'active',

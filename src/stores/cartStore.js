@@ -21,7 +21,13 @@ export const useCartStore = create(
       paymentDetails: {}, // For split payments or additional info
       isPaid: false,
       isComplimentary: false,
+      isPaid: false,
+      isComplimentary: false,
       isSalesReturn: false,
+      
+      // Bill Sheet Edits
+      deliveryCharge: 0,
+      customerPaid: 0,
 
       // Add item to cart
       addItem: (menuItem, quantity = 1, specialInstructions = '', variant = null, addons = []) => {
@@ -138,7 +144,11 @@ export const useCartStore = create(
       setPaymentDetails: (details) => set({ paymentDetails: details }),
       setIsPaid: (paid) => set({ isPaid: paid }),
       setIsComplimentary: (comp) => set({ isComplimentary: comp }),
+      setIsComplimentary: (comp) => set({ isComplimentary: comp }),
       setIsSalesReturn: (ret) => set({ isSalesReturn: ret }),
+      
+      setDeliveryCharge: (amount) => set({ deliveryCharge: amount }),
+      setCustomerPaid: (amount) => set({ customerPaid: amount }),
 
       // Calculate subtotal
       getSubtotal: () => {
@@ -214,11 +224,11 @@ export const useCartStore = create(
 
       // Calculate grand total
       getGrandTotal: () => {
-        const { isSalesReturn } = get();
+        const { isSalesReturn, deliveryCharge } = get();
         const taxableAmount = get().getTaxableAmount();
         const tax = get().getTaxBreakdown().total;
         const serviceCharge = get().getServiceCharge();
-        const total = taxableAmount + tax + serviceCharge;
+        const total = taxableAmount + tax + serviceCharge + (deliveryCharge || 0);
         return isSalesReturn ? -total : total;
       },
 
@@ -278,6 +288,8 @@ export const useCartStore = create(
           payment_method: state.paymentMethod,
           is_complimentary: state.isComplimentary ? 1 : 0,
           is_sales_return: state.isSalesReturn ? 1 : 0,
+          delivery_charge: state.deliveryCharge || 0,
+          customer_paid: state.customerPaid || 0,
           status: status,
           is_hold: isHold
         };
@@ -345,6 +357,8 @@ export const useCartStore = create(
           paymentMethod: order.payment_method || 'cash',
           isComplimentary: order.is_complimentary === 1,
           isSalesReturn: order.is_sales_return === 1,
+          deliveryCharge: order.delivery_charge || 0,
+          customerPaid: order.customer_paid || 0,
         });
       },
     }),
