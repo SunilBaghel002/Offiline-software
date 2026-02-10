@@ -375,6 +375,24 @@ class Database {
     });
   }
 
+  getAllOrders(limit = 50) {
+    return this.execute(`SELECT * FROM orders WHERE is_deleted = 0 ORDER BY created_at DESC LIMIT ?`, [limit]);
+  }
+
+  getRecentOrders(limit = 10) {
+    const orders = this.execute(`SELECT * FROM orders WHERE is_deleted = 0 ORDER BY created_at DESC LIMIT ?`, [limit]);
+    
+    // Enrich with items for display
+    for (const order of orders) {
+      order.items = this.execute(`
+        SELECT * FROM order_items 
+        WHERE order_id = ? AND is_deleted = 0
+      `, [order.id]);
+    }
+    
+    return orders;
+  }
+
   getPendingSyncItems(limit = 50) {
     return this.execute(
       `SELECT * FROM sync_queue WHERE status = 'pending' ORDER BY created_at ASC LIMIT ?`,
@@ -568,7 +586,7 @@ class Database {
   }
 
   getNextOrderNumber() {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA');
     
     const results = this.execute(
       `SELECT current_value, date FROM sequences WHERE sequence_name = 'order_number'`
@@ -606,7 +624,7 @@ class Database {
     const params = [];
 
     if (date) {
-      query += ` AND DATE(created_at) = ?`;
+      query += ` AND DATE(created_at, 'localtime') = ?`;
       params.push(date);
     }
 
@@ -748,7 +766,7 @@ class Database {
   }
 
   updateDailySales(order, paymentMethod) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA');
     
     const existing = this.execute(
       `SELECT * FROM daily_sales WHERE date = ?`,
@@ -894,25 +912,24 @@ class Database {
     const sales = this.execute(`
       SELECT 
         ? as date,
-        COUNT(*) as total_orders,
-        COALESCE(SUM(total_amount), 0) as total_revenue,
-        COALESCE(SUM(tax_amount), 0) as total_tax,
-        COALESCE(SUM(discount_amount), 0) as total_discount,
-        COALESCE(SUM(CASE WHEN payment_method = 'cash' THEN total_amount ELSE 0 END), 0) as cash_amount,
-        COALESCE(SUM(CASE WHEN payment_method = 'card' THEN total_amount ELSE 0 END), 0) as card_amount,
-        COALESCE(SUM(CASE WHEN payment_method = 'upi' THEN total_amount ELSE 0 END), 0) as upi_amount
+        COUNT(CASE WHEN status != 'cancelled' THEN 1 END) as total_orders,
+        COALESCE(SUM(CASE WHEN status != 'cancelled' THEN total_amount ELSE 0 END), 0) as total_revenue,
+        COALESCE(SUM(CASE WHEN status != 'cancelled' THEN tax_amount ELSE 0 END), 0) as total_tax,
+        COALESCE(SUM(CASE WHEN status != 'cancelled' THEN discount_amount ELSE 0 END), 0) as total_discount,
+        COALESCE(SUM(CASE WHEN payment_method = 'cash' AND status = 'completed' THEN total_amount ELSE 0 END), 0) as cash_amount,
+        COALESCE(SUM(CASE WHEN payment_method = 'card' AND status = 'completed' THEN total_amount ELSE 0 END), 0) as card_amount,
+        COALESCE(SUM(CASE WHEN payment_method = 'upi' AND status = 'completed' THEN total_amount ELSE 0 END), 0) as upi_amount
       FROM orders 
-      WHERE DATE(created_at) = ? 
-        AND status = 'completed'
+      WHERE DATE(created_at, 'localtime') = ? 
         AND is_deleted = 0
     `, [date, date]);
     
-    const orders = this.execute(`SELECT * FROM orders WHERE DATE(created_at) = ? AND is_deleted = 0 ORDER BY created_at DESC`, [date]);
+    const orders = this.execute(`SELECT * FROM orders WHERE DATE(created_at, 'localtime') = ? AND is_deleted = 0 ORDER BY created_at DESC`, [date]);
     const topItems = this.execute(`
       SELECT oi.item_name, SUM(oi.quantity) as total_quantity, SUM(oi.item_total) as total_revenue
       FROM order_items oi
       JOIN orders o ON oi.order_id = o.id
-      WHERE DATE(o.created_at) = ? AND o.status = 'completed' AND o.is_deleted = 0 AND oi.is_deleted = 0
+      WHERE DATE(o.created_at, 'localtime') = ? AND o.status = 'completed' AND o.is_deleted = 0 AND oi.is_deleted = 0
       GROUP BY oi.item_name
       ORDER BY total_quantity DESC
       LIMIT 10
@@ -929,20 +946,19 @@ class Database {
     // Calculate directly from orders table for accuracy
     return this.execute(`
       SELECT 
-        DATE(created_at) as date,
-        COUNT(*) as total_orders,
-        SUM(total_amount) as total_revenue,
-        SUM(tax_amount) as total_tax,
-        SUM(discount_amount) as total_discount,
-        SUM(CASE WHEN payment_method = 'cash' THEN total_amount ELSE 0 END) as cash_amount,
-        SUM(CASE WHEN payment_method = 'card' THEN total_amount ELSE 0 END) as card_amount,
-        SUM(CASE WHEN payment_method = 'upi' THEN total_amount ELSE 0 END) as upi_amount
+        DATE(created_at, 'localtime') as date,
+        COUNT(CASE WHEN status != 'cancelled' THEN 1 END) as total_orders,
+        SUM(CASE WHEN status != 'cancelled' THEN total_amount ELSE 0 END) as total_revenue,
+        SUM(CASE WHEN status != 'cancelled' THEN tax_amount ELSE 0 END) as total_tax,
+        SUM(CASE WHEN status != 'cancelled' THEN discount_amount ELSE 0 END) as total_discount,
+        SUM(CASE WHEN payment_method = 'cash' AND status = 'completed' THEN total_amount ELSE 0 END) as cash_amount,
+        SUM(CASE WHEN payment_method = 'card' AND status = 'completed' THEN total_amount ELSE 0 END) as card_amount,
+        SUM(CASE WHEN payment_method = 'upi' AND status = 'completed' THEN total_amount ELSE 0 END) as upi_amount
       FROM orders 
-      WHERE DATE(created_at) >= ? 
-        AND DATE(created_at) < date(?, '+7 days')
-        AND status = 'completed'
+      WHERE DATE(created_at, 'localtime') >= ? 
+        AND DATE(created_at, 'localtime') < date(?, '+7 days')
         AND is_deleted = 0
-      GROUP BY DATE(created_at)
+      GROUP BY DATE(created_at, 'localtime')
       ORDER BY date ASC
     `, [startDate, startDate]);
   }

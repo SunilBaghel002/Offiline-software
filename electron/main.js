@@ -282,6 +282,15 @@ function setupIpcHandlers() {
     }
   });
 
+  ipcMain.handle('order:getRecent', async (event, { limit }) => {
+    try {
+      return db.getRecentOrders(limit || 10);
+    } catch (error) {
+      log.error('Get recent orders error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('order:getById', async (event, { id }) => {
     try {
       return db.getOrderById(id);

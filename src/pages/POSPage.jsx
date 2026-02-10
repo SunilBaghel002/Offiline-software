@@ -54,7 +54,7 @@ const POSPage = () => {
   const [showAddonModal, setShowAddonModal] = useState(false);
   const [selectedItemForAddon, setSelectedItemForAddon] = useState(null);
   const [showHeldOrders, setShowHeldOrders] = useState(false);
-  const [heldOrders, setHeldOrders] = useState([]);
+  // heldOrders are now in cart store
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   
   // Strict Design Match State
@@ -69,7 +69,6 @@ const POSPage = () => {
   // Load categories and menu items
   useEffect(() => {
     loadData();
-    loadHeldOrders();
   }, []);
 
   const loadData = async () => {
@@ -87,16 +86,6 @@ const POSPage = () => {
       console.error('Failed to load data:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const loadHeldOrders = async () => {
-    try {
-      const orders = await window.electronAPI.invoke('order:getHeld');
-      setHeldOrders(Array.isArray(orders) ? orders : []);
-    } catch (error) {
-      console.error('Failed to load held orders:', error);
-      setHeldOrders([]);
     }
   };
 
@@ -124,6 +113,13 @@ const POSPage = () => {
     if (cart.items.length === 0) return;
     
     // Direct Checkout: Create Order -> KOT -> Print -> Clear
+    // Validate Customer Details
+    if (!cart.customerName?.trim() || !cart.customerPhone?.trim()) {
+      setShowCustomerForm(true);
+      alert("Customer Name and Phone Number are mandatory!");
+      return;
+    }
+
     if (window.confirm('Confirm Order & Send to Kitchen?')) {
         try {
             const result = await cart.createOrder(user?.id);
@@ -156,45 +152,53 @@ const POSPage = () => {
     }
   };
 
-  const handleHoldOrder = async () => {
-    if (cart.items.length === 0) return;
-    
-    if (window.confirm('Hold this order and clear cart?')) {
-      try {
-        const result = await cart.holdOrder(user.id);
-        if (result.success) {
-          loadHeldOrders(); // Refresh held orders list
-          // Cart is already cleared by holdOrder
-        } else {
-          alert('Failed to hold order: ' + result.error);
+  const handleHoldOrder = () => {
+    if (cart.items.length === 0) {
+      // Logic for empty cart: check held orders
+      if (cart.heldOrders.length === 0) {
+        alert('Cart is empty and no held orders.');
+      } else if (cart.heldOrders.length === 1) {
+        // Auto-resume if only 1
+        const order = cart.heldOrders[0];
+        if (window.confirm(`Resume held order #${order.orderNumber}?`)) {
+           cart.resumeOrder(order);
         }
-      } catch (error) {
-        console.error('Hold order error:', error);
-        alert('Error holding order');
+      } else {
+        // Show modal if > 1
+        setShowHeldOrders(true);
+      }
+      return;
+    }
+    
+    // Logic for non-empty cart: Hold it
+    if (window.confirm('Hold this order and clear cart?')) {
+      const result = cart.holdOrder();
+      if (result.success) {
+        // alert('Order Held Successfully');
+      } else {
+        alert('Failed to hold order: ' + result.error);
       }
     }
   };
 
-  const handleResumeOrder = async (order) => {
+  const handleResumeOrder = (order) => {
     if (cart.items.length > 0) {
-      if (!window.confirm('Current cart will be cleared. Continue?')) {
+      if (!window.confirm('Current cart will be cleared to resume order. Continue?')) {
         return;
       }
     }
     
-    try {
-      // Resume order (populates cart)
-      cart.resumeOrder(order);
-      
-      // Mark the held order as deleted so it doesn't appear in held list
-      await window.electronAPI.invoke('order:resume', { id: order.id });
-      
-      setShowHeldOrders(false);
-      loadHeldOrders();
-    } catch (error) {
-      console.error('Resume order error:', error);
-      alert('Error resuming order');
-    }
+    cart.resumeOrder(order);
+    setShowHeldOrders(false);
+  };
+
+  const handleDeleteHeldOrder = (orderId) => {
+      if(window.confirm('Are you sure you want to delete this held order?')) {
+          cart.removeHeldOrder(orderId);
+          if (cart.heldOrders.length === 0) {
+              setShowHeldOrders(false);
+          }
+      }
   };
 
   // KOT Only - Send to kitchen without completing order
@@ -202,6 +206,13 @@ const POSPage = () => {
     if (cart.items.length === 0) return;
     
     try {
+      // Validate Customer Details
+      if (!cart.customerName?.trim() || !cart.customerPhone?.trim()) {
+        setShowCustomerForm(true);
+        alert("Customer Name and Phone Number are mandatory!");
+        return;
+      }
+
       // Create a temporary order object for KOT
       const kotOrder = {
         order_type: cart.orderType,
@@ -235,6 +246,13 @@ const POSPage = () => {
     if (cart.items.length === 0) return;
     
     try {
+      // Validate Customer Details
+      if (!cart.customerName?.trim() || !cart.customerPhone?.trim()) {
+        setShowCustomerForm(true);
+        alert("Customer Name and Phone Number are mandatory!");
+        return;
+      }
+
       // Create order first
       const result = await cart.createOrder(user?.id);
       
@@ -265,6 +283,13 @@ const POSPage = () => {
     if (cart.items.length === 0) return;
     
     try {
+      // Validate Customer Details
+      if (!cart.customerName?.trim() || !cart.customerPhone?.trim()) {
+        setShowCustomerForm(true);
+        alert("Customer Name and Phone Number are mandatory!");
+        return;
+      }
+
       const result = await cart.createOrder(user?.id);
       
       if (result.success) {
@@ -689,9 +714,28 @@ const POSPage = () => {
                   <Printer size={18} style={{ marginBottom: '4px' }} />
                   KOT+Print
                </button>
-               <button className="pos-action-btn btn-hold" onClick={handleHoldOrder}>
+               <button className="pos-action-btn btn-hold" onClick={handleHoldOrder} style={{ position: 'relative' }}>
                   <PauseCircle size={18} style={{ marginBottom: '4px' }} />
                   Hold
+                  {cart.heldOrders.length > 0 && (
+                    <span style={{ 
+                      position: 'absolute', 
+                      top: '-5px', 
+                      right: '-5px', 
+                      background: '#D32F2F', 
+                      color: 'white', 
+                      borderRadius: '50%', 
+                      width: '20px', 
+                      height: '20px', 
+                      fontSize: '12px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      border: '2px solid white'
+                    }}>
+                      {cart.heldOrders.length}
+                    </span>
+                  )}
                </button>
                <button className="pos-action-btn btn-secondary" onClick={() => setShowHeldOrders(true)} title="View Held Orders">
                   <ClipboardList size={18} style={{ marginBottom: '4px' }} />
@@ -721,9 +765,10 @@ const POSPage = () => {
       
       {showHeldOrders && (
         <HeldOrdersModal
-          orders={heldOrders}
+          orders={cart.heldOrders}
           onClose={() => setShowHeldOrders(false)}
           onResume={handleResumeOrder}
+          onDelete={handleDeleteHeldOrder}
         />
       )}
 
@@ -1888,40 +1933,70 @@ const DiscountModal = ({ onClose, onApply, onClear, currentType, currentValue, s
 export default POSPage;
 
 // Held Orders Modal
-const HeldOrdersModal = ({ orders, onClose, onResume }) => {
+const HeldOrdersModal = ({ orders, onClose, onResume, onDelete }) => {
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '600px', maxHeight: '80vh' }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '700px', maxHeight: '80vh' }}>
         <div className="modal-header" style={{ background: '#37474F', color: 'white' }}>
-          <h3 className="modal-title" style={{ color: 'white' }}>Held Orders</h3>
+          <h3 className="modal-title" style={{ color: 'white' }}>Held Orders ({orders.length})</h3>
           <button className="modal-close-btn" onClick={onClose} style={{ color: 'white' }}><X size={20} /></button>
         </div>
         <div className="modal-body" style={{ padding: '0' }}>
           {orders.length === 0 ? (
-            <div className="empty-state" style={{ padding: '40px' }}>
+            <div className="empty-state" style={{ padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <PauseCircle size={48} color="#CFD8DC" />
-              <p>No held orders found</p>
+              <p style={{ marginTop: '16px', color: '#90A4AE' }}>No held orders found</p>
             </div>
           ) : (
             <div className="held-orders-list">
               {orders.map(order => (
                 <div key={order.id} style={{ padding: '16px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 'bold', fontSize: '16px' }}>Order #{order.order_number}</div>
-                    <div style={{ fontSize: '12px', color: '#666' }}>
-                      {new Date(order.created_at).toLocaleTimeString()} • {order.items.length} Items
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '16px' }}>Order #{order.orderNumber}</div>
+                        <span style={{ fontSize: '11px', background: '#ECEFF1', padding: '2px 6px', borderRadius: '4px', color: '#546E7A' }}>
+                            {new Date(order.timestamp).toLocaleTimeString()}
+                        </span>
                     </div>
-                    {order.customer_phone && <div style={{ fontSize: '12px', color: '#1976D2' }}>Customer: {order.customer_phone}</div>}
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      {order.items.length} Items • {order.orderType?.toUpperCase()}
+                    </div>
+                    {(order.customerName || order.customerPhone) && (
+                        <div style={{ fontSize: '12px', color: '#1976D2', marginTop: '2px' }}>
+                            <User size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }}/>
+                            {order.customerName} {order.customerPhone ? `(${order.customerPhone})` : ''}
+                        </div>
+                    )}
+                    {order.items.slice(0, 3).map((item, idx) => (
+                        <div key={idx} style={{ fontSize: '11px', color: '#90A4AE' }}>
+                            - {item.quantity} x {item.name}
+                        </div>
+                    ))}
+                    {order.items.length > 3 && <div style={{ fontSize: '11px', color: '#90A4AE' }}>... +{order.items.length - 3} more</div>}
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#D32F2F' }}>₹{order.total_amount.toFixed(2)}</div>
-                    <button 
-                      onClick={() => onResume(order)}
-                      className="btn btn-primary"
-                      style={{ marginTop: '8px', padding: '4px 12px', fontSize: '12px' }}
-                    >
-                      Resume
-                    </button>
+                  
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '18px', color: '#D32F2F' }}>
+                        ₹{order.totalAmount.toFixed(2)}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => onDelete(order.id)}
+                          className="btn"
+                          style={{ padding: '6px 12px', fontSize: '12px', border: '1px solid #FFCDD2', background: '#FFEBEE', color: '#D32F2F' }}
+                        >
+                          <Trash2 size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                          Delete
+                        </button>
+                        <button 
+                          onClick={() => onResume(order)}
+                          className="btn btn-primary"
+                          style={{ padding: '6px 12px', fontSize: '12px' }}
+                        >
+                          <PlayCircle size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                          Resume
+                        </button>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -12,6 +12,7 @@ import {
   AlertCircle,
   XCircle
 } from 'lucide-react';
+import { format } from 'date-fns';
 
 // Stat Card Component
 const StatCard = ({ title, value, trend, trendValue, icon: Icon, color }) => {
@@ -42,19 +43,23 @@ const StatCard = ({ title, value, trend, trendValue, icon: Icon, color }) => {
 // Order Card Component
 const OrderCard = ({ order }) => {
   const statusColors = {
+    active: 'info',
     pending: 'warning',
     preparing: 'info',
     ready: 'success',
     completed: 'success',
-    cancelled: 'danger'
+    cancelled: 'danger',
+    held: 'warning'
   };
 
   const statusIcons = {
+    active: Clock,
     pending: AlertCircle,
     preparing: Clock,
     ready: CheckCircle,
     completed: CheckCircle,
-    cancelled: XCircle
+    cancelled: XCircle,
+    held: AlertCircle
   };
 
   const StatusIcon = statusIcons[order.status] || AlertCircle;
@@ -74,10 +79,14 @@ const OrderCard = ({ order }) => {
         </span>
       </div>
       <div className="order-card-body">
+        <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px', borderBottom: '1px dashed #eee', paddingBottom: '4px' }}>
+            <div style={{ fontWeight: '600', color: '#333' }}>{order.customer_name || 'Walk-in'}</div>
+            <div>{order.customer_phone || '-'}</div>
+        </div>
         <div className="order-card-items">
           {order.items?.slice(0, 3).map((item, idx) => (
             <span key={idx} className="order-card-item">
-              {item.quantity}x {item.name}
+              {item.quantity}x {item.item_name || item.name}
             </span>
           ))}
           {order.items?.length > 3 && (
@@ -90,7 +99,7 @@ const OrderCard = ({ order }) => {
           <Clock size={12} />
           {new Date(order.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
         </span>
-        <span className="order-card-total">₹{order.total?.toFixed(0) || 0}</span>
+        <span className="order-card-total">₹{order.total_amount?.toFixed(0) || 0}</span>
       </div>
     </div>
   );
@@ -110,36 +119,45 @@ const DashboardPage = () => {
     loadDashboardData();
   }, []);
 
+
+
   const loadDashboardData = async () => {
     try {
       // Load today's report using existing API
-      const today = new Date().toISOString().split('T')[0];
+      // Use date-fns for consistent formatting matching ReportsPage
+      const today = format(new Date(), 'yyyy-MM-dd');
       
+      console.log('Fetching dashboard data for:', today);
+
       // Use reports:daily which exists in the backend
       const reportResult = await window.electronAPI.invoke('reports:daily', { date: today });
       
       if (reportResult) {
         const sales = reportResult.sales || {};
-        setStats({
+        setStats(prev => ({
+          ...prev,
           todayRevenue: sales.total_revenue || 0,
           totalOrders: sales.total_orders || 0,
           avgOrderValue: sales.total_orders > 0 ? (sales.total_revenue / sales.total_orders) : 0,
-          activeOrders: 0
-        });
+        }));
       }
 
-      // Load recent orders using order:getAll
-      const ordersResult = await window.electronAPI.invoke('order:getAll', { limit: 8 });
+      // Load recent orders using order:getRecent (which includes items)
+      console.log('Fetching recent orders...');
+      const ordersResult = await window.electronAPI.invoke('order:getRecent', { limit: 8 });
+      console.log('Recent orders result:', ordersResult);
+
       if (Array.isArray(ordersResult)) {
         setRecentOrders(ordersResult);
-        // Count active orders
+        // Count active orders (status is 'active' in DB, or 'pending'/'preparing'/'ready' conceptually)
         const activeCount = ordersResult.filter(o => 
-          ['pending', 'preparing', 'ready'].includes(o.status)
+          ['active', 'pending', 'preparing', 'ready', 'held'].includes(o.status)
         ).length;
         setStats(prev => ({ ...prev, activeOrders: activeCount }));
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
+      // Optional: alert(error.message); 
       // Set empty defaults on error
       setStats({
         todayRevenue: 0,

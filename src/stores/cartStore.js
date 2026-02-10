@@ -21,10 +21,11 @@ export const useCartStore = create(
       paymentDetails: {}, // For split payments or additional info
       isPaid: false,
       isComplimentary: false,
-      isPaid: false,
-      isComplimentary: false,
       isSalesReturn: false,
       
+      // Local Held Orders
+      heldOrders: [],
+
       // Bill Sheet Edits
       deliveryCharge: 0,
       customerPaid: 0,
@@ -320,46 +321,74 @@ export const useCartStore = create(
         }
       },
 
-      // Hold current order
-      holdOrder: async (cashierId) => {
-        return get().createOrder(cashierId, 'held', 1);
+      // Hold current order locally
+      holdOrder: () => {
+        const state = get();
+        if (state.items.length === 0) return { success: false, error: 'Cart is empty' };
+
+        const newHeldOrder = {
+          id: Date.now().toString(), // Unique ID for held order
+          timestamp: Date.now(),
+          orderNumber: `HOLD-${state.heldOrders.length + 1}`, // Temporary number
+          items: state.items,
+          orderType: state.orderType,
+          tableNumber: state.tableNumber,
+          customerName: state.customerName,
+          customerPhone: state.customerPhone,
+          notes: state.notes,
+          discountType: state.discountType,
+          discountValue: state.discountValue,
+          discountReason: state.discountReason,
+          serviceChargeEnabled: state.serviceChargeEnabled,
+          serviceChargePercent: state.serviceChargePercent,
+          paymentMethod: state.paymentMethod,
+          isComplimentary: state.isComplimentary,
+          isSalesReturn: state.isSalesReturn,
+          deliveryCharge: state.deliveryCharge,
+          customerPaid: state.customerPaid,
+          totalAmount: state.getGrandTotal()
+        };
+
+        set({
+          heldOrders: [...state.heldOrders, newHeldOrder]
+        });
+        
+        get().clearCart();
+        return { success: true };
       },
 
-      // Resume a held order (populate cart from order)
-      resumeOrder: (order) => {
+      // Remove a held order
+      removeHeldOrder: (heldOrderId) => {
+        const { heldOrders } = get();
+        set({ heldOrders: heldOrders.filter(order => order.id !== heldOrderId) });
+      },
+
+      // Resume a held order (populate cart from held order object)
+      resumeOrder: (heldOrder) => {
         // Clear current cart first
         get().clearCart();
 
-        // Parse items and add to cart
-        const items = order.items.map(item => ({
-          id: Date.now().toString() + Math.random(),
-          menuItemId: item.menu_item_id,
-          name: item.item_name,
-          unitPrice: item.unit_price,
-          quantity: item.quantity,
-          taxRate: 5, // Default or fetch from item if available
-          specialInstructions: item.special_instructions || '',
-          variant: item.variant ? (typeof item.variant === 'string' ? JSON.parse(item.variant) : item.variant) : null,
-          addons: item.addons ? (typeof item.addons === 'string' ? JSON.parse(item.addons) : item.addons) : [],
-        }));
-
         set({
-          items,
-          orderType: order.order_type || 'dine_in',
-          tableNumber: order.table_number || '',
-          customerName: order.customer_name || '',
-          customerPhone: order.customer_phone || '',
-          notes: order.notes || '',
-          discountType: order.discount_type || 'none',
-          discountValue: order.discount_amount || 0,
-          discountReason: order.discount_reason || '',
-          serviceChargeEnabled: order.service_charge > 0,
-          paymentMethod: order.payment_method || 'cash',
-          isComplimentary: order.is_complimentary === 1,
-          isSalesReturn: order.is_sales_return === 1,
-          deliveryCharge: order.delivery_charge || 0,
-          customerPaid: order.customer_paid || 0,
+          items: heldOrder.items,
+          orderType: heldOrder.orderType || 'dine_in',
+          tableNumber: heldOrder.tableNumber || '',
+          customerName: heldOrder.customerName || '',
+          customerPhone: heldOrder.customerPhone || '',
+          notes: heldOrder.notes || '',
+          discountType: heldOrder.discountType || 'none',
+          discountValue: heldOrder.discountValue || 0,
+          discountReason: heldOrder.discountReason || '',
+          serviceChargeEnabled: heldOrder.serviceChargeEnabled,
+          serviceChargePercent: heldOrder.serviceChargePercent || 0,
+          paymentMethod: heldOrder.paymentMethod || 'cash',
+          isComplimentary: heldOrder.isComplimentary,
+          isSalesReturn: heldOrder.isSalesReturn,
+          deliveryCharge: heldOrder.deliveryCharge || 0,
+          customerPaid: heldOrder.customerPaid || 0,
         });
+
+        // Remove from held orders list
+        get().removeHeldOrder(heldOrder.id);
       },
     }),
     {
@@ -380,6 +409,7 @@ export const useCartStore = create(
         paymentMethod: state.paymentMethod,
         isComplimentary: state.isComplimentary,
         isSalesReturn: state.isSalesReturn,
+        heldOrders: state.heldOrders, // Persist held orders
       }),
     }
   )
