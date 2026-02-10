@@ -197,6 +197,7 @@ const DashboardPage = () => {
     activeOrders: 0
   });
   const [recentOrders, setRecentOrders] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -330,6 +331,8 @@ const DashboardPage = () => {
           )}
         </div>
       </div>
+      {/* Order Details Modal */}
+      <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
     </div>
   );
 };
