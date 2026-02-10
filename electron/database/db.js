@@ -543,6 +543,8 @@ class Database {
       delivery_charge: order.delivery_charge || 0,
       customer_paid: order.customer_paid || 0,
       total_amount: order.total_amount || 0,
+      payment_method: order.payment_method || null,
+      payment_status: order.payment_status || 'pending',
       notes: order.notes || '',
       status: order.status || 'active',
       is_hold: order.is_hold || 0,
@@ -1024,6 +1026,38 @@ class Database {
 
   deleteUser(id) {
     this.delete('users', { id });
+  }
+
+  // ===== Customer Operations =====
+  searchCustomers(query) {
+    if (!query) return [];
+    const search = `%${query}%`;
+    return this.execute(`
+      SELECT DISTINCT customer_name, customer_phone 
+      FROM orders 
+      WHERE (customer_phone LIKE ? OR customer_name LIKE ?) 
+        AND customer_phone IS NOT NULL 
+        AND customer_phone != ''
+      LIMIT 10
+    `, [search, search]);
+  }
+
+  getOrdersByPhone(phone) {
+    const orders = this.execute(`
+      SELECT * FROM orders 
+      WHERE customer_phone = ? AND is_deleted = 0 
+      ORDER BY created_at DESC
+    `, [phone]);
+
+    // Enrich with items
+    for (const order of orders) {
+      order.items = this.execute(`
+        SELECT * FROM order_items 
+        WHERE order_id = ? AND is_deleted = 0
+      `, [order.id]);
+    }
+    
+    return orders;
   }
 
   // ===== Sessions =====

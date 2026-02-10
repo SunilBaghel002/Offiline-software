@@ -8,7 +8,8 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  FileSpreadsheet
+  FileSpreadsheet,
+  XCircle
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -27,12 +28,97 @@ import {
 import { format, subDays, startOfWeek, addDays } from 'date-fns';
 import * as XLSX from 'xlsx';
 
+
+
+// Order Details Modal Component
+const OrderDetailsModal = ({ order, onClose }) => {
+  if (!order) return null;
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center'
+    }} onClick={onClose}>
+      <div 
+        style={{
+          background: 'white', width: '90%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto',
+          borderRadius: '8px', padding: '24px', position: 'relative', boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+        }} 
+        onClick={e => e.stopPropagation()}
+      >
+        <button onClick={onClose} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', background: 'none', cursor: 'pointer' }}>
+          <XCircle size={24} color="#546E7A" />
+        </button>
+        
+        <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', color: '#2c3e50', borderBottom: '1px solid #eee', paddingBottom: '12px' }}>
+          Order #{order.order_number}
+        </h2>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+           <div>
+             <div style={{ fontSize: '12px', color: '#7f8c8d' }}>Date & Time</div>
+             <div style={{ fontWeight: '500' }}>{new Date(order.created_at).toLocaleString()}</div>
+           </div>
+           <div>
+             <div style={{ fontSize: '12px', color: '#7f8c8d' }}>Order Type</div>
+             <div style={{ fontWeight: '500', textTransform: 'capitalize' }}>{order.order_type?.replace('_', ' ')}</div>
+           </div>
+           <div>
+             <div style={{ fontSize: '12px', color: '#7f8c8d' }}>Payment Type</div>
+             <div style={{ fontWeight: '500', textTransform: 'capitalize' }}>{order.payment_method || '-'}</div>
+           </div>
+           <div>
+             <div style={{ fontSize: '12px', color: '#7f8c8d' }}>Status</div>
+             <div style={{ fontWeight: '500', textTransform: 'capitalize' }}>{order.status}</div>
+           </div>
+           <div>
+             <div style={{ fontSize: '12px', color: '#7f8c8d' }}>Customer Name</div>
+             <div style={{ fontWeight: '500' }}>{order.customer_name || 'Walk-in'}</div>
+           </div>
+           <div>
+             <div style={{ fontSize: '12px', color: '#7f8c8d' }}>Phone</div>
+             <div style={{ fontWeight: '500' }}>{order.customer_phone || '-'}</div>
+           </div>
+        </div>
+
+        <h3 style={{ fontSize: '16px', margin: '0 0 12px 0', color: '#34495e' }}>Order Items</h3>
+        <div style={{ border: '1px solid #eee', borderRadius: '8px', overflow: 'hidden', marginBottom: '20px' }}>
+           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+             <thead style={{ background: '#f8f9fa' }}>
+               <tr>
+                 <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #eee' }}>Item</th>
+                 <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #eee' }}>Qty</th>
+                 <th style={{ padding: '8px 12px', textAlign: 'right', borderBottom: '1px solid #eee' }}>Price</th>
+               </tr>
+             </thead>
+             <tbody>
+               {order.items?.map((item, idx) => (
+                 <tr key={idx} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                   <td style={{ padding: '8px 12px' }}>{item.item_name || item.name}</td>
+                   <td style={{ padding: '8px 12px', textAlign: 'center' }}>{item.quantity}</td>
+                   <td style={{ padding: '8px 12px', textAlign: 'right' }}>₹{(item.price || item.unit_price) * item.quantity}</td>
+                 </tr>
+               ))}
+             </tbody>
+           </table>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '18px', fontWeight: 'bold', borderTop: '1px solid #eee', paddingTop: '16px' }}>
+           <span>Total Amount</span>
+           <span style={{ color: '#27ae60' }}>₹{order.total_amount || 0}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ReportsPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [reportType, setReportType] = useState('daily');
   const [dailyData, setDailyData] = useState(null);
   const [weeklyData, setWeeklyData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   useEffect(() => {
     loadReport();
@@ -228,16 +314,19 @@ const ReportsPage = () => {
           <p className="mt-4">Loading report...</p>
         </div>
       ) : reportType === 'daily' ? (
-        <DailyReport data={dailyData} paymentData={paymentData} />
+        <DailyReport data={dailyData} paymentData={paymentData} onViewOrder={setSelectedOrder} />
       ) : (
         <WeeklyReport data={weeklyData} startDate={startOfWeek(selectedDate, { weekStartsOn: 1 })} />
       )}
+      
+      {/* Order Details Modal */}
+      <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
     </div>
   );
 };
 
 // Daily Report Component
-const DailyReport = ({ data, paymentData }) => {
+const DailyReport = ({ data, paymentData, onViewOrder }) => {
   const sales = data?.sales || {};
   const orders = data?.orders || [];
   const topItems = data?.topItems || [];
@@ -453,7 +542,12 @@ const DailyReport = ({ data, paymentData }) => {
             <tbody>
               {orders.length > 0 ? (
                 orders.map(order => (
-                  <tr key={order.id}>
+                  <tr 
+                    key={order.id} 
+                    onClick={() => onViewOrder && onViewOrder(order)} 
+                    style={{ cursor: 'pointer', transition: 'background 0.2s', ':hover': { background: '#f5f5f5' } }}
+                    className="hover:bg-gray-50"
+                  >
                     <td style={{ fontWeight: 600 }}>#{order.order_number}</td>
                     <td>{new Date(order.created_at).toLocaleTimeString()}</td>
                     <td>{order.order_type.replace('_', ' ')}</td>

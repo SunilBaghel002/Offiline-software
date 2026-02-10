@@ -44,6 +44,9 @@ const validInvokeChannels = [
   'users:getAll',
   'users:save',
   'users:delete',
+  // Customers
+  'customer:search',
+  'customer:getHistory',
   // Printing
   'print:receipt',
   'print:kot',

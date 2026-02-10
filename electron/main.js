@@ -339,6 +339,24 @@ function setupIpcHandlers() {
     }
   });
 
+  ipcMain.handle('customer:search', async (event, { query }) => {
+    try {
+      return db.searchCustomers(query);
+    } catch (error) {
+      log.error('Search customers error:', error);
+      return [];
+    }
+  });
+
+  ipcMain.handle('customer:getHistory', async (event, { phone }) => {
+    try {
+      return db.getOrdersByPhone(phone);
+    } catch (error) {
+      log.error('Get customer history error:', error);
+      return [];
+    }
+  });
+
   ipcMain.handle('order:getByPhone', async (event, { phone }) => {
     try {
       return db.getOrdersByPhone(phone);

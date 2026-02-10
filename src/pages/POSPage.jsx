@@ -13,6 +13,7 @@ import {
   Printer,
   Check,
   Search,
+
   Leaf,
   FileText,
   PauseCircle,
@@ -38,9 +39,113 @@ import {
   Wine,
   Utensils,
   Menu,
-  ChevronDown
+  ChevronDown,
+  Edit2
 } from 'lucide-react';
 import MainSidebar from '../components/layout/MainSidebar';
+
+const CustomerHistoryModal = ({ isOpen, onClose, history, customerName, customerPhone }) => {
+  if (!isOpen) return null;
+
+  const maxOrderValue = history.length > 0 ? Math.max(...history.map(o => o.total_amount || 0)) : 0;
+  const totalSpent = history.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+  const avgBill = history.length > 0 ? totalSpent / history.length : 0;
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'flex-end'
+    }} onClick={onClose}>
+      <div 
+        style={{
+          background: 'white', width: '600px', height: '100%', 
+          display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 15px rgba(0,0,0,0.1)',
+          animation: 'slideInRight 0.3s ease-out'
+        }} 
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ padding: '20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8f9fa' }}>
+          <div>
+             <h3 style={{ margin: 0, fontSize: '18px', color: '#2c3e50' }}>Customer History</h3>
+             <div style={{ fontSize: '13px', color: '#7f8c8d', marginTop: '4px' }}>{customerName || 'Unknown'} - {customerPhone}</div>
+          </div>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px' }}><X size={24} color="#546E7A" /></button>
+        </div>
+
+        <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', borderBottom: '1px solid #eee', background: '#fff' }}>
+            <div style={{ background: '#e3f2fd', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+               <div style={{ fontSize: '11px', color: '#546e7a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Orders</div>
+               <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#0288d1' }}>{history.length}</div>
+            </div>
+            <div style={{ background: '#e8f5e9', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+               <div style={{ fontSize: '11px', color: '#546e7a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Max Order</div>
+               <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#388e3c' }}>₹{maxOrderValue.toFixed(0)}</div>
+            </div>
+            <div style={{ background: '#fff3e0', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+               <div style={{ fontSize: '11px', color: '#546e7a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Avg Order</div>
+               <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#f57c00' }}>₹{avgBill.toFixed(0)}</div>
+            </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0', background: '#fff' }}>
+           {history.length === 0 ? (
+             <div style={{ textAlign: 'center', padding: '40px 20px', color: '#90a4ae' }}>
+                <Clock size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                <p>No order history found for this customer.</p>
+             </div>
+           ) : (
+             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+               <thead style={{ position: 'sticky', top: 0, background: '#f8f9fa', color: '#546E7A', fontWeight: '600', zIndex: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                 <tr>
+                   <th style={{ padding: '12px', borderBottom: '1px solid #eee' }}>Order No</th>
+                   <th style={{ padding: '12px', borderBottom: '1px solid #eee' }}>Date</th>
+                   <th style={{ padding: '12px', borderBottom: '1px solid #eee' }}>Type</th>
+                   <th style={{ padding: '12px', borderBottom: '1px solid #eee' }}>Items</th>
+                   <th style={{ padding: '12px', borderBottom: '1px solid #eee' }}>Payment Type</th>
+                   <th style={{ padding: '12px', borderBottom: '1px solid #eee', textAlign: 'right' }}>Amount</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 {history.map((order, idx) => (
+                   <tr key={order.id} style={{ borderBottom: '1px solid #f5f5f5', background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                      <td style={{ padding: '12px', fontWeight: '500', color: '#37474F' }}>#{order.order_number}</td>
+                      <td style={{ padding: '12px', color: '#78909C' }}>{new Date(order.created_at).toLocaleDateString()}</td>
+                      <td style={{ padding: '12px' }}>
+                        <span style={{ 
+                          background: order.order_type === 'dine_in' ? '#E3F2FD' : order.order_type === 'delivery' ? '#FFF3E0' : '#E8F5E9', 
+                          color: order.order_type === 'dine_in' ? '#1565C0' : order.order_type === 'delivery' ? '#EF6C00' : '#2E7D32',
+                          padding: '2px 8px', borderRadius: '4px', fontSize: '11px', textTransform: 'capitalize' 
+                        }}>
+                          {order.order_type?.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#546E7A' }} title={order.items?.map(i => `${i.quantity} x ${i.item_name}`).join(', ')}>
+                         {order.items?.map(i => `${i.quantity} x ${i.item_name}`).join(', ')}
+                      </td>
+                      <td style={{ padding: '12px', color: '#546E7A', textTransform: 'capitalize' }}>
+                         {order.payment_method === 'upi' ? 'UPI' : 
+                          order.payment_method === 'card' ? 'Card' : 
+                          order.payment_method === 'due' ? 'Pay Later' : 
+                          order.payment_method === 'split' ? 'Split' : 
+                          order.payment_method === 'cash' ? 'Cash' : '-'}
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: '#263238' }}>₹{order.total_amount}</td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+           )}
+        </div>
+      </div>
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+      `}</style>
+    </div>
+  );
+};
 
 const POSPage = () => {
   const [categories, setCategories] = useState([]);
@@ -62,6 +167,50 @@ const POSPage = () => {
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [showBillSheet, setShowBillSheet] = useState(false);
   const [showMainSidebar, setShowMainSidebar] = useState(false);
+
+  // Customer Autocomplete & History
+  const [customerSuggestions, setCustomerSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [historyData, setHistoryData] = useState([]);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [customerLocality, setCustomerLocality] = useState('');
+
+  const handlePhoneInput = async (e) => {
+      const val = e.target.value;
+      cart.setCustomerPhone(val);
+      
+      if (val.length > 2) {
+          try {
+              const suggestions = await window.electronAPI.invoke('customer:search', { query: val });
+              setCustomerSuggestions(suggestions);
+              setShowSuggestions(true);
+          } catch (err) {
+              console.error(err);
+          }
+      } else {
+          setCustomerSuggestions([]);
+          setShowSuggestions(false);
+      }
+  };
+
+  const selectCustomer = (cust) => {
+      cart.setCustomerName(cust.customer_name);
+      cart.setCustomerPhone(cust.customer_phone);
+      // If we had address/locality in DB, we'd set them here
+      setShowSuggestions(false);
+  };
+
+  const fetchHistory = async () => {
+      if (!cart.customerPhone) return alert("Please enter mobile number first");
+      try {
+          const history = await window.electronAPI.invoke('customer:getHistory', { phone: cart.customerPhone });
+          setHistoryData(history);
+          setShowHistoryModal(true);
+      } catch (err) {
+          alert("Failed to fetch history");
+      }
+  };
 
   const { user } = useAuthStore();
   const cart = useCartStore();
@@ -339,6 +488,13 @@ const POSPage = () => {
   return (
     <div className="pos-fullscreen">
       {/* Header Bar - Strict PetPooja Design */}
+      <CustomerHistoryModal 
+        isOpen={showHistoryModal} 
+        onClose={() => setShowHistoryModal(false)} 
+        history={historyData}
+        customerName={cart.customerName}
+        customerPhone={cart.customerPhone}
+      />
       <div className="pos-header-bar">
         <div className="pos-header-left">
           <button 
@@ -498,56 +654,84 @@ const POSPage = () => {
 
           {/* User Info Form - Inline Slide Down */}
           {showCustomerForm && (
-          <div className="pos-user-info-form" style={{ background: 'white', padding: '8px 12px', borderBottom: '1px solid #CFD8DC', fontSize: '13px', animation: 'slideDown 0.2s ease-out' }}>
-             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                <div>
-                    <label style={{ color: '#546E7A', fontWeight: 500, display: 'block', marginBottom: '2px' }}>Mobile:</label>
-                    <div style={{ display: 'flex' }}>
-                        <input 
-                          type="text" 
-                          placeholder="Mobile No"
-                          value={cart.customerPhone || ''}
-                          onChange={(e) => cart.setCustomerPhone(e.target.value)}
-                          style={{ border: '1px solid #CFD8DC', borderRadius: '2px 0 0 2px', padding: '6px 8px', fontSize: '13px', outline: 'none', flex: 1, borderRight: 'none' }}
-                        />
-                        <button 
-                          onClick={() => setShowHistoryDrawer(true)}
-                          style={{ background: '#ECEFF1', border: '1px solid #CFD8DC', padding: '0 8px', cursor: 'pointer' }}
-                          title="Customer History"
-                        >
-                           <Clock size={14} color="#546E7A" />
-                        </button>
-                    </div>
-                </div>
-                <div>
-                    <label style={{ color: '#546E7A', fontWeight: 500, display: 'block', marginBottom: '2px' }}>Name:</label>
-                    <input 
-                      type="text" 
-                      placeholder="Customer Name"
-                      value={cart.customerName || ''}
-                      onChange={(e) => cart.setCustomerName(e.target.value)}
-                      style={{ border: '1px solid #CFD8DC', borderRadius: '2px', padding: '6px 8px', fontSize: '13px', outline: 'none', width: '100%' }}
-                    />
-                </div>
-             </div>
+          <div className="pos-user-info-form" style={{ background: 'white', padding: '12px', borderBottom: '1px solid #CFD8DC', fontSize: '13px', animation: 'slideDown 0.2s ease-out', display: 'flex', flexDirection: 'column', gap: '10px' }}>
              
-             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <div className="pos-input-group">
-                    <label style={{ color: '#546E7A', fontWeight: 500, display: 'block', marginBottom: '2px' }}>Address:</label>
+             {/* Mobile Number with Autocomplete */}
+             <div style={{ position: 'relative' }}>
+                <label style={{ color: '#546E7A', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Mobile Number:</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
                     <input 
                       type="text" 
-                      placeholder="Address"
-                      style={{ border: '1px solid #CFD8DC', borderRadius: '2px', padding: '6px 8px', fontSize: '13px', outline: 'none', width: '100%' }}
+                      placeholder="Enter Mobile No"
+                      value={cart.customerPhone || ''}
+                      onChange={handlePhoneInput}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                      autoComplete="off"
+                      style={{ border: '1px solid #CFD8DC', borderRadius: '4px', padding: '8px', fontSize: '14px', outline: 'none', flex: 1 }}
                     />
+                    <button 
+                       onClick={fetchHistory}
+                       style={{ background: '#ECEFF1', border: '1px solid #CFD8DC', borderRadius: '4px', padding: '0 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                       title="View History"
+                    >
+                       <Clock size={16} color="#546E7A" />
+                       <span style={{ color: '#546E7A', fontWeight: 500 }}>History</span>
+                    </button>
                 </div>
-                <div className="pos-input-group">
-                    <label style={{ color: '#546E7A', fontWeight: 500, display: 'block', marginBottom: '2px' }}>Locality:</label>
-                    <input 
-                      type="text" 
-                      placeholder="Locality"
-                      style={{ border: '1px solid #CFD8DC', borderRadius: '2px', padding: '6px 8px', fontSize: '13px', outline: 'none', width: '100%' }}
-                    />
-                </div>
+                {/* Suggestions Dropdown */}
+                {showSuggestions && customerSuggestions.length > 0 && (
+                    <div style={{ 
+                        position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, 
+                        background: 'white', border: '1px solid #eee', borderRadius: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        maxHeight: '200px', overflowY: 'auto'
+                    }}>
+                        {customerSuggestions.map((cust, i) => (
+                            <div 
+                                key={i} 
+                                onMouseDown={() => selectCustomer(cust)}
+                                style={{ padding: '8px 12px', borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }}
+                            >
+                                <div style={{ fontWeight: '500', color: '#2c3e50' }}>{cust.customer_phone}</div>
+                                <div style={{ fontSize: '12px', color: '#7f8c8d' }}>{cust.customer_name}</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+             </div>
+
+             {/* Name */}
+             <div>
+                <label style={{ color: '#546E7A', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Customer Name:</label>
+                <input 
+                  type="text" 
+                  placeholder="Enter Name"
+                  value={cart.customerName || ''}
+                  onChange={(e) => cart.setCustomerName(e.target.value)}
+                  style={{ border: '1px solid #CFD8DC', borderRadius: '4px', padding: '8px', fontSize: '14px', outline: 'none', width: '100%' }}
+                />
+             </div>
+
+             {/* Column Layout for Address & Locality */}
+             <div>
+                <label style={{ color: '#546E7A', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Address:</label>
+                <input 
+                  type="text" 
+                  placeholder="Enter Address"
+                  value={customerAddress}
+                  onChange={(e) => setCustomerAddress(e.target.value)}
+                  style={{ border: '1px solid #CFD8DC', borderRadius: '4px', padding: '8px', fontSize: '14px', outline: 'none', width: '100%' }}
+                />
+             </div>
+
+             <div>
+                <label style={{ color: '#546E7A', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Locality:</label>
+                <input 
+                  type="text" 
+                  placeholder="Enter Locality"
+                  value={customerLocality}
+                  onChange={(e) => setCustomerLocality(e.target.value)}
+                  style={{ border: '1px solid #CFD8DC', borderRadius: '4px', padding: '8px', fontSize: '14px', outline: 'none', width: '100%' }}
+                />
              </div>
           </div>
           )}
@@ -742,10 +926,96 @@ const POSPage = () => {
                   Recall
                </button>
              </div>
+           </div>
+
+           {/* Detailed Bill Sheet Overlay */}
+           {showBillSheet && (
+             <div className="pos-bottom-sheet" style={{ 
+                 position: 'absolute', 
+                 bottom: '130px', /* Sit above payment/action buttons (approx 120-130px height) */
+                 right: '12px', 
+                 left: '12px', /* Match cart panel width minus padding */
+                 background: 'white',
+                 zIndex: 30,
+                 borderRadius: '16px',
+                 boxShadow: '0 -4px 20px rgba(0,0,0,0.15)',
+                 animation: 'slideUp 0.3s ease-out',
+                 border: '1px solid #e0e0e0'
+             }}>
+                 <div className="sheet-header" style={{ padding: '12px 16px', background: '#37474F', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '16px 16px 0 0' }}>
+                     <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Bill Details</h3>
+                     <button onClick={() => setShowBillSheet(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: 0 }}><ChevronDown size={24} /></button>
+                 </div>
+                 <div className="sheet-body" style={{ padding: '20px' }}>
+                    
+                    {/* Subtotal */}
+                    <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px', color: '#37474F' }}>
+                       <span>Subtotal</span>
+                       <span style={{ fontWeight: 600 }}>₹{cart.getSubtotal().toFixed(2)}</span>
+                    </div>
+                    
+                    {/* Editable Discount */}
+                    <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', fontSize: '14px' }}>
+                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#37474F' }}>
+                           Discount 
+                           <button onClick={() => setShowDiscountModal(true)} style={{ background: '#E3F2FD', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#1565C0', padding: '2px 6px', display: 'flex', alignItems: 'center' }}>
+                               <Edit2 size={10} style={{ marginRight: '2px' }} /> Edit
+                           </button>
+                       </span>
+                       <span style={{ color: cart.discountValue > 0 ? '#388e3c' : '#78909c', fontWeight: cart.discountValue > 0 ? 600 : 400 }}>
+                           {cart.discountValue > 0 ? `-₹${cart.getDiscountAmount().toFixed(2)}` : '₹0.00'}
+                       </span>
+                    </div>
+       
+                    {/* Taxes breakdown */}
+                    <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px', color: '#78909C' }}>
+                       <span>SGST 2.5%</span>
+                       <span>₹{cart.getTaxBreakdown().sgst.toFixed(2)}</span>
+                    </div>
+                    <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '14px', color: '#78909C' }}>
+                       <span>CGST 2.5%</span>
+                       <span>₹{cart.getTaxBreakdown().cgst.toFixed(2)}</span>
+                    </div>
+                    
+                    {/* Editable Container Charge */}
+                    <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', fontSize: '14px', color: '#37474F' }}>
+                       <span>Container Charge</span>
+                       <input 
+                           type="number" 
+                           value={cart.packagingCharge || ''}
+                           onChange={(e) => cart.setPackagingCharge(parseFloat(e.target.value) || 0)}
+                           placeholder="0"
+                           style={{ width: '80px', textAlign: 'right', border: '1px solid #CFD8DC', padding: '4px 8px', borderRadius: '4px', outline: 'none', fontSize: '14px' }}
+                       />
+                    </div>
+
+                    {/* Editable Delivery Charge */}
+                    <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', fontSize: '14px', color: '#37474F' }}>
+                       <span>Delivery Charge</span>
+                        <input 
+                           type="number" 
+                           value={cart.deliveryCharge || ''}
+                           onChange={(e) => cart.setDeliveryCharge(parseFloat(e.target.value) || 0)}
+                           placeholder="0"
+                           style={{ width: '80px', textAlign: 'right', border: '1px solid #CFD8DC', padding: '4px 8px', borderRadius: '4px', outline: 'none', fontSize: '14px' }}
+                       />
+                    </div>
+
+                    {/* Divider */}
+                    <div style={{ height: '1px', background: '#eee', marginBottom: '16px' }}></div>
+
+                    {/* Grand Total */}
+                    <div className="bill-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', color: '#D32F2F' }}>
+                       <span>Grand Total</span>
+                       <span>₹{cart.getGrandTotal().toFixed(2)}</span>
+                    </div>
+                 </div>
+           </div>
+           )}
           </div>
         </div>
 
-      </div>
+
 
       {/* Modals */}
       {showAddonModal && selectedItemForAddon && (
