@@ -243,6 +243,23 @@ function setupIpcHandlers() {
     }
   });
 
+  ipcMain.handle('menu:deleteCategory', async (event, { id }) => {
+    try {
+      // Check if any items use this category
+      const items = db.execute('SELECT id FROM menu_items WHERE category_id = ? AND is_deleted = 0', [id]);
+      if (items.length > 0) {
+        return { success: false, error: 'Cannot delete category with existing items. Please remove or move checking items first.' };
+      }
+
+      // Soft delete category
+      db.run('UPDATE categories SET is_deleted = 1 WHERE id = ?', [id]);
+      return { success: true };
+    } catch (error) {
+      log.error('Delete category error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
 
 
   // ============ ADDONS OPERATIONS ============
@@ -519,6 +536,24 @@ function setupIpcHandlers() {
       return db.getSalesSummary(from, to);
     } catch (error) {
       log.error('Get sales summary error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('reports:billerDaily', async (event, { userId, date }) => {
+    try {
+      return db.getBillerReport(userId, date);
+    } catch (error) {
+      log.error('Get biller report error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('reports:allBillers', async (event, { date }) => {
+    try {
+      return db.getAllBillersReport(date);
+    } catch (error) {
+      log.error('Get all billers report error:', error);
       return { success: false, error: error.message };
     }
   });

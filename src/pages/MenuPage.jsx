@@ -73,9 +73,7 @@ const MenuPage = () => {
     setShowCategoryModal(true);
   };
 
-  const handleDeleteCategory = async (id) => { // Added for completeness if needed later, but keeping loop clean
-    // ... implementation if needed, but sticking to existing logic ...
-  };
+
 
   // Helper for Global Addons List Modal
   const handleEditAddon = (addon) => {
@@ -87,6 +85,18 @@ const MenuPage = () => {
     if (window.confirm('Are you sure you want to delete this add-on?')) {
       await window.electronAPI.invoke('menu:deleteAddon', { id });
       loadData();
+    }
+  };
+
+  const handleDeleteCategory = async (id) => {
+    if (window.confirm('Are you sure you want to delete this category?')) {
+      const result = await window.electronAPI.invoke('menu:deleteCategory', { id });
+      if (result.success) {
+        loadData();
+        if (selectedCategory === id) setSelectedCategory(null);
+      } else {
+        alert(result.error);
+      }
     }
   };
 
@@ -176,6 +186,14 @@ const MenuPage = () => {
                 style={{ padding: '4px' }}
               >
                 <Edit2 size={14} />
+              </button>
+              <button
+                className="btn btn-ghost btn-icon btn-sm"
+                onClick={() => handleDeleteCategory(cat.id)}
+                style={{ padding: '4px', color: 'var(--danger-500)' }}
+                title="Delete Category"
+              >
+                <Trash2 size={14} />
               </button>
             </div>
           ))}

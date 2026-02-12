@@ -2006,7 +2006,7 @@ const DiscountModal = ({ onClose, onApply, onClear, currentType, currentValue, s
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1005 }}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '450px', height: 'auto', maxHeight: '90vh' }}>
         {/* Header */}
         <div className="modal-header" style={{ background: '#D32F2F', color: 'white' }}>

@@ -10,13 +10,16 @@ import {
   MoreHorizontal,
   CheckCircle,
   AlertCircle,
-  XCircle
+  XCircle,
+  Minus
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
-// Stat Card Component
+// StatCard Component
 const StatCard = ({ title, value, trend, trendValue, icon: Icon, color }) => {
   const isPositive = trend === 'up';
+  const isNegative = trend === 'down';
+  const isNeutral = trend === 'neutral';
   
   return (
     <div className="stat-card">
@@ -32,8 +35,10 @@ const StatCard = ({ title, value, trend, trendValue, icon: Icon, color }) => {
         <span className="stat-card-title">{title}</span>
         <span className="stat-card-value">{value}</span>
       </div>
-      <div className={`stat-card-trend ${isPositive ? 'positive' : 'negative'}`}>
-        {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+      <div className={`stat-card-trend ${isPositive ? 'positive' : isNegative ? 'negative' : 'neutral'}`} style={{ color: isNeutral ? 'var(--gray-500)' : undefined }}>
+        {isPositive && <TrendingUp size={14} />}
+        {isNegative && <TrendingDown size={14} />}
+        {isNeutral && <Minus size={14} />}
         <span>{trendValue}% from yesterday</span>
       </div>
     </div>
@@ -194,7 +199,11 @@ const DashboardPage = () => {
     todayRevenue: 0,
     totalOrders: 0,
     avgOrderValue: 0,
-    activeOrders: 0
+    activeOrders: 0,
+    revenueTrend: { direction: 'neutral', value: 0 },
+    ordersTrend: { direction: 'neutral', value: 0 },
+    avgOrderTrend: { direction: 'neutral', value: 0 },
+    activeOrdersTrend: { direction: 'neutral', value: 0 }
   });
   const [recentOrders, setRecentOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -208,49 +217,65 @@ const DashboardPage = () => {
 
   const loadDashboardData = async () => {
     try {
-      // Load today's report using existing API
-      // Use date-fns for consistent formatting matching ReportsPage
       const today = format(new Date(), 'yyyy-MM-dd');
+      const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+
+      // Fetch today's and yesterday's reports for comparison
+      const [todayReport, yesterdayReport, recentOrdersData] = await Promise.all([
+        window.electronAPI.invoke('reports:daily', { date: today }),
+        window.electronAPI.invoke('reports:daily', { date: yesterday }),
+        window.electronAPI.invoke('order:getRecent', { limit: 8 })
+      ]);
+
+      const todaySales = todayReport?.sales || {};
+      const yesterdaySales = yesterdayReport?.sales || {};
+
+      // Helper to calculate trend
+      const calculateTrend = (current, previous) => {
+        const currVal = parseFloat(current) || 0;
+        const prevVal = parseFloat(previous) || 0;
+
+        if (prevVal === 0) {
+          return { direction: currVal > 0 ? 'up' : 'neutral', value: currVal > 0 ? 100 : 0 };
+        }
+        
+        const change = ((currVal - prevVal) / prevVal) * 100;
+        return {
+          direction: change > 0 ? 'up' : change < 0 ? 'down' : 'neutral',
+          value: Math.abs(change).toFixed(1)
+        };
+      };
+
+      // Calculate Trends
+      const revenueTrend = calculateTrend(todaySales.total_revenue, yesterdaySales.total_revenue);
+      const ordersTrend = calculateTrend(todaySales.total_orders, yesterdaySales.total_orders);
       
-      console.log('Fetching dashboard data for:', today);
+      const currentAvg = todaySales.total_orders > 0 ? (todaySales.total_revenue / todaySales.total_orders) : 0;
+      const prevAvg = yesterdaySales.total_orders > 0 ? (yesterdaySales.total_revenue / yesterdaySales.total_orders) : 0;
+      const avgOrderTrend = calculateTrend(currentAvg, prevAvg);
 
-      // Use reports:daily which exists in the backend
-      const reportResult = await window.electronAPI.invoke('reports:daily', { date: today });
-      
-      if (reportResult) {
-        const sales = reportResult.sales || {};
-        setStats(prev => ({
-          ...prev,
-          todayRevenue: sales.total_revenue || 0,
-          totalOrders: sales.total_orders || 0,
-          avgOrderValue: sales.total_orders > 0 ? (sales.total_revenue / sales.total_orders) : 0,
-        }));
-      }
-
-      // Load recent orders using order:getRecent (which includes items)
-      console.log('Fetching recent orders...');
-      const ordersResult = await window.electronAPI.invoke('order:getRecent', { limit: 8 });
-      console.log('Recent orders result:', ordersResult);
-
-      if (Array.isArray(ordersResult)) {
-        setRecentOrders(ordersResult);
-        // Count active orders (status is 'active' in DB, or 'pending'/'preparing'/'ready' conceptually)
-        const activeCount = ordersResult.filter(o => 
+      // Active Orders
+      let activeCount = 0;
+      if (Array.isArray(recentOrdersData)) {
+        setRecentOrders(recentOrdersData);
+        activeCount = recentOrdersData.filter(o => 
           ['active', 'pending', 'preparing', 'ready', 'held'].includes(o.status)
         ).length;
-        setStats(prev => ({ ...prev, activeOrders: activeCount }));
       }
+
+      setStats({
+        todayRevenue: todaySales.total_revenue || 0,
+        totalOrders: todaySales.total_orders || 0,
+        avgOrderValue: currentAvg,
+        activeOrders: activeCount,
+        revenueTrend,
+        ordersTrend,
+        avgOrderTrend,
+        activeOrdersTrend: { direction: 'neutral', value: 0 } // Realtime active orders don't have historical trend easily
+      });
+
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
-      // Optional: alert(error.message); 
-      // Set empty defaults on error
-      setStats({
-        todayRevenue: 0,
-        totalOrders: 0,
-        avgOrderValue: 0,
-        activeOrders: 0
-      });
-      setRecentOrders([]);
     } finally {
       setIsLoading(false);
     }
@@ -279,32 +304,32 @@ const DashboardPage = () => {
         <StatCard
           title="Today's Revenue"
           value={`₹${stats.todayRevenue.toLocaleString()}`}
-          trend="up"
-          trendValue="12.5"
+          trend={stats.revenueTrend.direction}
+          trendValue={stats.revenueTrend.value}
           icon={DollarSign}
           color="primary"
         />
         <StatCard
           title="Total Orders"
           value={stats.totalOrders}
-          trend="up"
-          trendValue="8.2"
+          trend={stats.ordersTrend.direction}
+          trendValue={stats.ordersTrend.value}
           icon={ShoppingCart}
           color="success"
         />
         <StatCard
           title="Avg Order Value"
           value={`₹${stats.avgOrderValue.toFixed(0)}`}
-          trend="down"
-          trendValue="3.1"
+          trend={stats.avgOrderTrend.direction}
+          trendValue={stats.avgOrderTrend.value}
           icon={TrendingUp}
           color="warning"
         />
         <StatCard
           title="Active Orders"
           value={stats.activeOrders}
-          trend="up"
-          trendValue="15.0"
+          trend={stats.activeOrdersTrend.direction}
+          trendValue={stats.activeOrdersTrend.value}
           icon={Clock}
           color="info"
         />

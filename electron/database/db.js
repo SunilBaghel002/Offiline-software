@@ -1003,6 +1003,63 @@ class Database {
     };
   }
 
+  // Get report for a specific biller on a given date
+  getBillerReport(userId, date) {
+    const sales = this.execute(`
+      SELECT 
+        COUNT(CASE WHEN status != 'cancelled' THEN 1 END) as total_orders,
+        COALESCE(SUM(CASE WHEN status != 'cancelled' THEN total_amount ELSE 0 END), 0) as total_revenue,
+        COALESCE(SUM(CASE WHEN status != 'cancelled' THEN tax_amount ELSE 0 END), 0) as total_tax,
+        COALESCE(SUM(CASE WHEN status != 'cancelled' THEN discount_amount ELSE 0 END), 0) as total_discount,
+        COALESCE(SUM(CASE WHEN payment_method = 'cash' AND status = 'completed' THEN total_amount ELSE 0 END), 0) as cash_amount,
+        COALESCE(SUM(CASE WHEN payment_method = 'card' AND status = 'completed' THEN total_amount ELSE 0 END), 0) as card_amount,
+        COALESCE(SUM(CASE WHEN payment_method = 'upi' AND status = 'completed' THEN total_amount ELSE 0 END), 0) as upi_amount
+      FROM orders 
+      WHERE DATE(created_at, 'localtime') = ? 
+        AND cashier_id = ?
+        AND is_deleted = 0
+    `, [date, userId]);
+
+    const orders = this.execute(`
+      SELECT * FROM orders 
+      WHERE DATE(created_at, 'localtime') = ? AND cashier_id = ? AND is_deleted = 0 
+      ORDER BY created_at DESC
+    `, [date, userId]);
+
+    // Enrich with items
+    for (const order of orders) {
+      order.items = this.execute(`SELECT * FROM order_items WHERE order_id = ? AND is_deleted = 0`, [order.id]);
+    }
+
+    return {
+      sales: sales[0] || { total_orders: 0, total_revenue: 0, cash_amount: 0, card_amount: 0, upi_amount: 0 },
+      orders,
+    };
+  }
+
+  // Get performance summary for all billers on a given date
+  getAllBillersReport(date) {
+    return this.execute(`
+      SELECT 
+        u.id as user_id,
+        u.full_name,
+        u.username,
+        u.role,
+        COUNT(CASE WHEN o.status != 'cancelled' THEN 1 END) as total_orders,
+        COALESCE(SUM(CASE WHEN o.status != 'cancelled' THEN o.total_amount ELSE 0 END), 0) as total_revenue,
+        COALESCE(SUM(CASE WHEN o.payment_method = 'cash' AND o.status = 'completed' THEN o.total_amount ELSE 0 END), 0) as cash_amount,
+        COALESCE(SUM(CASE WHEN o.payment_method = 'card' AND o.status = 'completed' THEN o.total_amount ELSE 0 END), 0) as card_amount,
+        COALESCE(SUM(CASE WHEN o.payment_method = 'upi' AND o.status = 'completed' THEN o.total_amount ELSE 0 END), 0) as upi_amount
+      FROM users u
+      LEFT JOIN orders o ON o.cashier_id = u.id 
+        AND DATE(o.created_at, 'localtime') = ? 
+        AND o.is_deleted = 0
+      WHERE u.is_deleted = 0 AND u.is_active = 1 AND u.role IN ('cashier', 'admin')
+      GROUP BY u.id
+      ORDER BY total_revenue DESC
+    `, [date]);
+  }
+
   getWeeklyReport(startDate) {
     // Calculate directly from orders table for accuracy
     return this.execute(`
