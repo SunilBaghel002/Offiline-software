@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   Package, 
   Plus, 
-  Minus,
   AlertTriangle,
   Search,
   X,
@@ -11,8 +10,7 @@ import {
   TrendingUp,
   History,
   Trash2,
-  MoreVertical,
-  Filter
+  MoreVertical
 } from 'lucide-react';
 
 const InventoryPage = () => {
@@ -81,20 +79,24 @@ const InventoryPage = () => {
 
   if (isLoading) {
     return (
-      <div className="empty-state">
-        <div className="loading-spinner" />
-        <p className="mt-4">Loading inventory...</p>
+      <div style={{ padding: 'var(--spacing-6)', textAlign: 'center' }}>
+        <p>Loading inventory...</p>
       </div>
     );
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="page-content" style={{ animation: 'fadeIn 0.3s ease-out' }}>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: 'var(--spacing-6)' 
+      }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inventory Management</h1>
-          <p className="text-gray-500">Track stock levels, value, and history</p>
+          <h1 style={{ fontSize: 'var(--font-size-2xl)', marginBottom: 'var(--spacing-1)' }}>Inventory Management</h1>
+          <p style={{ color: 'var(--gray-500)' }}>Track stock levels, value, and history</p>
         </div>
         <button 
           className="btn btn-primary"
@@ -109,51 +111,90 @@ const InventoryPage = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="stat-card">
-          <div className="stat-icon bg-blue-50 text-blue-600">
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
+        gap: 'var(--spacing-4)', 
+        marginBottom: 'var(--spacing-6)' 
+      }}>
+        {/* Total Items */}
+        <div className="card" style={{ padding: 'var(--spacing-4)', display: 'flex', alignItems: 'center', gap: 'var(--spacing-4)' }}>
+          <div style={{ 
+            padding: 'var(--spacing-3)', 
+            borderRadius: 'var(--radius-full)', 
+            background: 'var(--info-50)', 
+            color: 'var(--info-600)' 
+          }}>
             <Package size={24} />
           </div>
           <div>
-            <div className="stat-value">{inventory.length}</div>
-            <div className="stat-label">Total Items</div>
+            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'bold' }}>{inventory.length}</div>
+            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)' }}>Total Items</div>
           </div>
         </div>
         
+        {/* Low Stock */}
         <div 
-          className={`stat-card cursor-pointer ${showLowStock ? 'ring-2 ring-orange-500' : ''}`}
+          className="card" 
+          style={{ 
+            padding: 'var(--spacing-4)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 'var(--spacing-4)',
+            cursor: 'pointer',
+            border: showLowStock ? '2px solid var(--warning-500)' : '1px solid var(--gray-200)'
+          }}
           onClick={() => setShowLowStock(!showLowStock)}
         >
-          <div className="stat-icon bg-orange-50 text-orange-600">
+          <div style={{ 
+            padding: 'var(--spacing-3)', 
+            borderRadius: 'var(--radius-full)', 
+            background: 'var(--warning-50)', 
+            color: 'var(--warning-600)' 
+          }}>
             <AlertTriangle size={24} />
           </div>
           <div>
-            <div className="stat-value text-orange-600">{lowStockCount}</div>
-            <div className="stat-label">Low Stock Items</div>
+            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'bold', color: 'var(--warning-600)' }}>{lowStockCount}</div>
+            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)' }}>Low Stock Items</div>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-icon bg-green-50 text-green-600">
-            <div className="font-bold text-xl">₹</div>
+        {/* Total Value */}
+        <div className="card" style={{ padding: 'var(--spacing-4)', display: 'flex', alignItems: 'center', gap: 'var(--spacing-4)' }}>
+          <div style={{ 
+            padding: 'var(--spacing-3)', 
+            borderRadius: 'var(--radius-full)', 
+            background: 'var(--success-50)', 
+            color: 'var(--success-600)',
+            width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <span style={{ fontSize: 'var(--font-size-xl)', fontWeight: 'bold' }}>₹</span>
           </div>
           <div>
-            <div className="stat-value">₹{totalValue.toLocaleString()}</div>
-            <div className="stat-label">Total Stock Value</div>
+            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'bold' }}>₹{totalValue.toLocaleString()}</div>
+            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)' }}>Total Stock Value</div>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-4 items-center">
-        <div className="relative flex-1 max-w-md">
+      <div style={{ display: 'flex', gap: 'var(--spacing-4)', marginBottom: 'var(--spacing-4)', alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
           <Search 
             size={18} 
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
+            style={{ 
+              position: 'absolute', 
+              left: '12px', 
+              top: '50%', 
+              transform: 'translateY(-50%)', 
+              color: 'var(--gray-400)' 
+            }}
           />
           <input
             type="text"
-            className="input pl-10 w-full"
+            className="input"
+            style={{ paddingLeft: '40px' }}
             placeholder="Search by item name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -162,7 +203,8 @@ const InventoryPage = () => {
         
         {showLowStock && (
           <button
-            className="btn btn-sm btn-ghost text-orange-600"
+            className="btn btn-ghost"
+            style={{ color: 'var(--warning-600)' }}
             onClick={() => setShowLowStock(false)}
           >
             <X size={16} />
@@ -172,77 +214,74 @@ const InventoryPage = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-gray-50 border-b border-gray-100">
+      <div className="table-container">
+        <table className="table">
+          <thead>
             <tr>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Item Name</th>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Stock Level</th>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit Cost</th>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Value</th>
-              <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+              <th>Item Name</th>
+              <th>Status</th>
+              <th>Stock Level</th>
+              <th>Unit Cost</th>
+              <th>Total Value</th>
+              <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody>
             {filteredInventory.map(item => {
               const stockPercentage = Math.min(100, (item.current_stock / (item.minimum_stock * 3)) * 100);
               const isLow = item.current_stock <= item.minimum_stock;
               
               return (
-                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    <div>{item.name}</div>
-                    <div className="text-xs text-gray-400">{item.supplier}</div>
+                <tr key={item.id}>
+                  <td>
+                    <div style={{ fontWeight: 500 }}>{item.name}</div>
+                    <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>{item.supplier}</div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td>
                     {isLow ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        Low Stock
-                      </span>
+                      <span className="badge badge-warning">Low Stock</span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        In Stock
-                      </span>
+                      <span className="badge badge-success">In Stock</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 w-24 bg-gray-200 rounded-full h-2">
+                  <td style={{ minWidth: '200px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-3)' }}>
+                      <div style={{ flex: 1, height: '8px', background: 'var(--gray-200)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
                         <div 
-                          className={`h-2 rounded-full ${isLow ? 'bg-red-500' : 'bg-green-500'}`}
-                          style={{ width: `${stockPercentage}%` }}
+                          style={{ 
+                            height: '100%', 
+                            width: `${stockPercentage}%`, 
+                            background: isLow ? 'var(--warning-500)' : 'var(--success-500)',
+                            borderRadius: 'var(--radius-full)'
+                          }}
                         />
                       </div>
-                      <span className="text-sm font-medium">
-                        {item.current_stock} <span className="text-gray-500 text-xs">{item.unit}</span>
+                      <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 500 }}>
+                        {item.current_stock} <span style={{ color: 'var(--gray-500)', fontSize: 'var(--font-size-xs)' }}>{item.unit}</span>
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-gray-600">
-                    ₹{item.cost_per_unit || 0}
-                  </td>
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    ₹{((item.cost_per_unit || 0) * item.current_stock).toFixed(2)}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
+                  <td>₹{item.cost_per_unit || 0}</td>
+                  <td>₹{((item.cost_per_unit || 0) * item.current_stock).toFixed(2)}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--spacing-2)' }}>
                       <button 
-                        className="p-2 rounded-lg hover:bg-white border border-transparent hover:border-gray-200 hover:shadow-sm text-blue-600 transition-all"
+                        className="btn btn-sm btn-ghost"
                         onClick={() => handleStockUpdate(item)}
                         title="Update Stock"
+                        style={{ color: 'var(--info-600)' }}
                       >
                         <TrendingUp size={16} />
                       </button>
                       <button 
-                        className="p-2 rounded-lg hover:bg-white border border-transparent hover:border-gray-200 hover:shadow-sm text-gray-600 transition-all"
+                        className="btn btn-sm btn-ghost"
                         onClick={() => handleHistory(item)}
                         title="View History"
                       >
                         <History size={16} />
                       </button>
                       <button 
-                        className="p-2 rounded-lg hover:bg-white border border-transparent hover:border-gray-200 hover:shadow-sm text-gray-600 transition-all"
+                        className="btn btn-sm btn-ghost"
                         onClick={() => handleEdit(item)}
                         title="Edit Item"
                       >
@@ -256,11 +295,11 @@ const InventoryPage = () => {
             
             {filteredInventory.length === 0 && (
               <tr>
-                <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                  <div className="flex flex-col items-center justify-center">
-                    <Package size={48} className="text-gray-300 mb-4" />
-                    <p className="text-lg font-medium text-gray-900">No items found</p>
-                    <p className="text-sm">Try adjusting your search or add a new item.</p>
+                <td colSpan="6" style={{ textAlign: 'center', padding: 'var(--spacing-8)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--gray-500)' }}>
+                    <Package size={48} style={{ marginBottom: 'var(--spacing-2)', color: 'var(--gray-300)' }} />
+                    <p style={{ fontWeight: 500 }}>No items found</p>
+                    <p style={{ fontSize: 'var(--font-size-sm)' }}>Try adjusting your search or add a new item.</p>
                   </div>
                 </td>
               </tr>
@@ -321,7 +360,7 @@ const InventoryModal = ({ item, onClose, onSave, onDelete }) => {
     name: item?.name || '',
     unit: item?.unit || 'kg',
     current_stock: item?.current_stock || 0,
-    minimum_stock: item?.minimum_stock || 0, // Should default to something reasonable or 0
+    minimum_stock: item?.minimum_stock || 0,
     cost_per_unit: item?.cost_per_unit || '',
     supplier: item?.supplier || '',
   });
@@ -353,14 +392,14 @@ const InventoryModal = ({ item, onClose, onSave, onDelete }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal w-full max-w-md" onClick={e => e.stopPropagation()}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3 className="modal-title">{item ? 'Edit Item' : 'Add New Item'}</h3>
           <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="modal-body space-y-4">
-            <div className="input-group">
+          <div className="modal-body">
+            <div className="input-group mb-3">
               <label className="input-label">Item Name</label>
               <input 
                 className="input" 
@@ -371,7 +410,7 @@ const InventoryModal = ({ item, onClose, onSave, onDelete }) => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-3)' }}>
               <div className="input-group">
                 <label className="input-label">Unit Type</label>
                 <select 
@@ -394,7 +433,7 @@ const InventoryModal = ({ item, onClose, onSave, onDelete }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-3)', marginBottom: 'var(--spacing-3)' }}>
               <div className="input-group">
                 <label className="input-label">Min. Stock Alert</label>
                 <input 
@@ -427,13 +466,13 @@ const InventoryModal = ({ item, onClose, onSave, onDelete }) => {
               />
             </div>
           </div>
-          <div className="modal-footer flex justify-between">
+          <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
             {onDelete ? (
-              <button type="button" className="btn btn-danger btn-ghost" onClick={onDelete}>
+              <button type="button" className="btn btn-danger" onClick={onDelete}>
                 <Trash2 size={16} /> Delete
               </button>
             ) : <div />}
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: 'var(--spacing-2)' }}>
               <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
               <button type="submit" className="btn btn-primary" disabled={isSaving}>
                 {isSaving ? 'Saving...' : 'Save Item'}
@@ -485,36 +524,37 @@ const StockUpdateModal = ({ item, onClose, onSave }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal w-full max-w-sm" onClick={e => e.stopPropagation()}>
+      <div className="modal" style={{ maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3 className="modal-title">Update Stock: {item.name}</h3>
           <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="modal-body space-y-4">
-            <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-lg">
+          <div className="modal-body">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-2)', marginBottom: 'var(--spacing-4)' }}>
               <button 
                 type="button" 
-                className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${operation === 'add' ? 'bg-white shadow text-green-700' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`btn ${operation === 'add' ? 'btn-success' : 'btn-secondary'}`}
                 onClick={() => { setOperation('add'); setReason('Purchase'); }}
               >
                 Add (+)
               </button>
               <button 
                 type="button"
-                className={`py-2 px-4 rounded-md text-sm font-medium transition-colors ${operation === 'subtract' ? 'bg-white shadow text-red-700' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`btn ${operation === 'subtract' ? 'btn-danger' : 'btn-secondary'}`}
                 onClick={() => { setOperation('subtract'); setReason('Waste'); }}
               >
                 Remove (-)
               </button>
             </div>
 
-            <div className="input-group">
+            <div className="input-group mb-3">
               <label className="input-label">Quantity ({item.unit})</label>
               <input 
                 type="number" 
                 step="0.01" 
-                className="input text-lg font-bold" 
+                className="input"
+                style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'bold' }}
                 autoFocus
                 required
                 value={quantity}
@@ -522,7 +562,7 @@ const StockUpdateModal = ({ item, onClose, onSave }) => {
               />
             </div>
 
-            <div className="input-group">
+            <div className="input-group mb-3">
               <label className="input-label">Reason</label>
               <select 
                 className="input select"
@@ -533,7 +573,7 @@ const StockUpdateModal = ({ item, onClose, onSave }) => {
               </select>
             </div>
 
-            <div className="input-group">
+            <div className="input-group mb-3">
               <label className="input-label">Notes (Optional)</label>
               <input 
                 className="input" 
@@ -543,9 +583,19 @@ const StockUpdateModal = ({ item, onClose, onSave }) => {
               />
             </div>
 
-            <div className="bg-gray-50 p-3 rounded-lg flex justify-between items-center text-sm">
-              <span className="text-gray-500">New Stock Level:</span>
-              <span className={`font-bold ${operation === 'subtract' ? 'text-red-600' : 'text-green-600'}`}>
+            <div style={{ 
+              padding: 'var(--spacing-3)', 
+              background: 'var(--gray-50)', 
+              borderRadius: 'var(--radius-lg)',
+              display: 'flex', 
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ color: 'var(--gray-500)' }}>New Stock Level:</span>
+              <span style={{ 
+                fontWeight: 'bold',
+                color: operation === 'subtract' ? 'var(--danger-600)' : 'var(--success-600)'
+              }}>
                 {isNaN(calculatedStock) ? '...' : calculatedStock.toFixed(2)} {item.unit}
               </span>
             </div>
@@ -580,53 +630,56 @@ const HistoryModal = ({ item, onClose }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal w-full max-w-2xl" onClick={e => e.stopPropagation()}>
+      <div className="modal" style={{ maxWidth: '700px' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div>
             <h3 className="modal-title">{item.name} - History</h3>
-            <p className="text-xs text-gray-400">Transaction log</p>
+            <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>Transaction log</p>
           </div>
           <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={20} /></button>
         </div>
-        <div className="modal-body p-0">
-          <div className="max-h-[60vh] overflow-y-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 sticky top-0">
+        <div className="modal-body" style={{ padding: 0 }}>
+          <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+            <table className="table">
+              <thead style={{ position: 'sticky', top: 0, background: 'var(--gray-50)', zIndex: 1 }}>
                 <tr>
-                  <th className="px-5 py-3 text-gray-500 font-medium">Date</th>
-                  <th className="px-5 py-3 text-gray-500 font-medium">Type</th>
-                  <th className="px-5 py-3 text-gray-500 font-medium">Change</th>
-                  <th className="px-5 py-3 text-gray-500 font-medium">Stock After</th>
-                  <th className="px-5 py-3 text-gray-500 font-medium">Reason</th>
-                  <th className="px-5 py-3 text-gray-500 font-medium">Notes</th>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Change</th>
+                  <th>Stock After</th>
+                  <th>Reason</th>
+                  <th>Notes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {isLoading ? (
-                  <tr><td colSpan="6" className="p-8 text-center">Loading...</td></tr>
+                  <tr><td colSpan="6" style={{ textAlign: 'center', padding: 'var(--spacing-4)' }}>Loading...</td></tr>
                 ) : history.length === 0 ? (
-                  <tr><td colSpan="6" className="p-8 text-center text-gray-500">No history found.</td></tr>
+                  <tr><td colSpan="6" style={{ textAlign: 'center', padding: 'var(--spacing-4)', color: 'var(--gray-500)' }}>No history found.</td></tr>
                 ) : (
                   history.map(record => (
-                    <tr key={record.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 text-gray-600">
+                    <tr key={record.id}>
+                      <td style={{ color: 'var(--gray-600)' }}>
                         {new Date(record.created_at).toLocaleString()}
                       </td>
-                      <td className="px-5 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          record.type === 'add' ? 'bg-green-100 text-green-700' : 
-                          record.type === 'subtract' ? 'bg-red-100 text-red-700' : 
-                          'bg-blue-100 text-blue-700'
+                      <td>
+                        <span className={`badge badge-${
+                          record.type === 'add' ? 'success' : 
+                          record.type === 'subtract' ? 'error' : 
+                          'info'
                         }`}>
                           {record.type.toUpperCase()}
                         </span>
                       </td>
-                      <td className={`px-5 py-3 font-medium ${record.type === 'add' ? 'text-green-600' : 'text-red-600'}`}>
+                      <td style={{ 
+                        fontWeight: 500, 
+                        color: record.type === 'add' ? 'var(--success-600)' : 'var(--danger-600)' 
+                      }}>
                         {record.type === 'add' ? '+' : '-'}{record.quantity}
                       </td>
-                      <td className="px-5 py-3 text-gray-900">{record.current_stock_snapshot}</td>
-                      <td className="px-5 py-3 text-gray-600">{record.reason}</td>
-                      <td className="px-5 py-3 text-gray-400 text-xs truncate max-w-[150px]" title={record.notes}>
+                      <td>{record.current_stock_snapshot}</td>
+                      <td>{record.reason}</td>
+                      <td style={{ maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={record.notes}>
                         {record.notes || '-'}
                       </td>
                     </tr>
@@ -637,7 +690,7 @@ const HistoryModal = ({ item, onClose }) => {
           </div>
         </div>
         <div className="modal-footer">
-          <button className="btn btn-secondary w-full" onClick={onClose}>Close</button>
+          <button className="btn btn-secondary" onClick={onClose} style={{ width: '100%' }}>Close</button>
         </div>
       </div>
     </div>
