@@ -451,7 +451,7 @@ const CompleteOrderModal = ({ order, onClose, onComplete }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', height: 'auto' }}>
         <div className="modal-header">
           <h3 className="modal-title">Complete Order #{order.order_number}</h3>
           <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={20} /></button>
