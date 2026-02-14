@@ -531,6 +531,7 @@ const UserModal = ({ user, onClose, onSave }) => {
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   required
+                  autoFocus
                   style={{ padding: '6px 10px', fontSize: '13px' }}
                 />
               </div>

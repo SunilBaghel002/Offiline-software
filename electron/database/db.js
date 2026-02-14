@@ -1667,6 +1667,39 @@ class Database {
       this.insert('settings', { key, value });
     }
   }
+  // ===== User Operations =====
+  createUser(user) {
+    this.insert('users', {
+      id: user.id,
+      username: user.username,
+      password_hash: user.password_hash,
+      full_name: user.full_name,
+      role: user.role,
+      is_active: user.is_active,
+      pin_code: user.pin_code,
+      created_at: new Date().toISOString()
+    });
+    return { success: true, id: user.id };
+  }
+
+  updateUser(id, updates) {
+    this.update('users', updates, { id });
+    return { success: true };
+  }
+
+  getUserByUsername(username) {
+    const users = this.execute('SELECT * FROM users WHERE username = ?', [username]);
+    return users[0] || null;
+  }
+
+  getUserByPin(pin) {
+    const users = this.execute('SELECT * FROM users WHERE pin_code = ? AND is_active = 1', [pin]);
+    return users[0] || null;
+  }
+
+  logSession(userId, action) {
+    // Implementation for session logging if needed
+  }
 }
 
 module.exports = { Database };

@@ -311,7 +311,36 @@ const DashboardPage = () => {
   if (isLoading) {
     return (
       <div className="page-container">
-        <div className="loading-spinner">Loading dashboard...</div>
+        <div className="page-header">
+           <div className="skeleton" style={{ height: '32px', width: '200px', marginBottom: '8px' }}></div>
+           <div className="skeleton" style={{ height: '20px', width: '300px' }}></div>
+        </div>
+        
+        <div className="stats-grid">
+           {[1, 2, 3, 4].map(i => (
+             <div key={i} className="stat-card" style={{ height: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                   <div className="skeleton" style={{ width: '40px', height: '40px', borderRadius: '8px' }}></div>
+                   <div className="skeleton" style={{ width: '20px', height: '20px', borderRadius: '50%' }}></div>
+                </div>
+                <div>
+                   <div className="skeleton" style={{ width: '80px', height: '16px', marginBottom: '8px' }}></div>
+                   <div className="skeleton" style={{ width: '120px', height: '28px' }}></div>
+                </div>
+             </div>
+           ))}
+        </div>
+
+        <div className="dashboard-section">
+           <div className="section-header">
+              <div className="skeleton" style={{ width: '150px', height: '24px' }}></div>
+           </div>
+           <div className="orders-grid">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="skeleton" style={{ height: '180px', borderRadius: '12px' }}></div>
+              ))}
+           </div>
+        </div>
       </div>
     );
   }
