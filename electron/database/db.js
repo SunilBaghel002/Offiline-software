@@ -79,6 +79,10 @@ class Database {
     } catch (error) { if (!error.message.includes("duplicate column name")) console.log('Migration note:', error.message); }
 
     try {
+      this.db.run("ALTER TABLE menu_items ADD COLUMN is_favorite INTEGER DEFAULT 0");
+    } catch (error) { if (!error.message.includes("duplicate column name")) console.log('Migration note:', error.message); }
+
+    try {
       // Add is_hold to orders
       this.db.run("ALTER TABLE orders ADD COLUMN is_hold INTEGER DEFAULT 0");
     } catch (error) { if (!error.message.includes("duplicate column name")) console.log('Migration note:', error.message); }
@@ -565,6 +569,12 @@ class Database {
   deleteMenuItem(id) {
     this.delete('menu_items', { id });
     this.addToSyncQueue('menu_item', id, 'delete', { id });
+  }
+
+  toggleFavorite(id, isFavorite) {
+    this.run('UPDATE menu_items SET is_favorite = ?, updated_at = ? WHERE id = ?', [isFavorite ? 1 : 0, new Date().toISOString(), id]);
+    this.addToSyncQueue('menu_item', id, 'update', { id, is_favorite: isFavorite });
+    return { success: true };
   }
 
   importMenu(items) {

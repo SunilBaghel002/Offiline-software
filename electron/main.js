@@ -244,6 +244,15 @@ function setupIpcHandlers() {
     }
   });
 
+  ipcMain.handle('menu:toggleFavorite', async (event, { id, isFavorite }) => {
+    try {
+      return db.toggleFavorite(id, isFavorite);
+    } catch (error) {
+      log.error('Toggle favorite error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('menu:deleteCategory', async (event, { id }) => {
     try {
       // Check if any items use this category

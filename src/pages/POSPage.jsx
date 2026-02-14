@@ -42,7 +42,8 @@ import {
   ChevronDown,
   Edit2,
   AlertTriangle,
-  MapPin
+  MapPin,
+  Star
 } from 'lucide-react';
 import MainSidebar from '../components/layout/MainSidebar';
 import '../styles/pos-sheet.css';
@@ -244,7 +245,32 @@ const POSPage = () => {
     }
   };
 
+  const toggleFavorite = async (e, item) => {
+    e.stopPropagation();
+    const newStatus = !item.is_favorite;
+    
+    // Optimistic update
+    setMenuItems(prev => prev.map(i => 
+      i.id === item.id ? { ...i, is_favorite: newStatus } : i
+    ));
+
+    try {
+      await window.electronAPI.invoke('menu:toggleFavorite', { id: item.id, isFavorite: newStatus });
+    } catch (error) {
+      console.error('Failed to toggle favorite:', error);
+      // Revert on failure
+      setMenuItems(prev => prev.map(i => 
+        i.id === item.id ? { ...i, is_favorite: !newStatus } : i
+      ));
+    }
+  };
+
   const filteredItems = menuItems.filter(item => {
+    // Favorites Category Logic
+    if (selectedCategory === 'favorites') {
+      return item.is_favorite && (!searchQuery || item.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+
     const matchesCategory = !selectedCategory || item.category_id === selectedCategory;
     const matchesSearch = !searchQuery ||
       item.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -601,6 +627,18 @@ const POSPage = () => {
               </div>
               <span>All Items</span>
             </div>
+            
+            {/* Favorites Category */}
+            <div
+              className={`pos-category-item ${selectedCategory === 'favorites' ? 'active' : ''}`}
+              onClick={() => setSelectedCategory('favorites')}
+            >
+              <div className="pos-category-icon-wrapper" style={{ marginBottom: '4px' }}>
+                <Star size={32} fill={selectedCategory === 'favorites' ? "white" : "#FFC107"} color={selectedCategory === 'favorites' ? "white" : "#FFC107"} />
+              </div>
+              <span>Favorites</span>
+            </div>
+
             {categories.map((category, index) => {
               // Helper to get icon based on category name
               const getIcon = (name) => {
@@ -638,6 +676,12 @@ const POSPage = () => {
               {filteredItems.length > 0 ? (
                 filteredItems.map(item => (
                   <div key={item.id} className={`pos-menu-card ${item.is_vegetarian ? 'veg' : 'nonveg'}`} onClick={() => handleAddToCart(item)}>
+                    <div 
+                      className={`favorite-btn ${item.is_favorite ? 'is-fav' : ''}`}
+                      onClick={(e) => toggleFavorite(e, item)}
+                    >
+                      <Star size={16} fill={item.is_favorite ? "#FFC107" : "none"} color={item.is_favorite ? "#FFC107" : "#CBD5E1"} />
+                    </div>
                     <div className="pos-menu-card-inner">
                       <span className="pos-menu-card-name">{item.name}</span>
                       <span className="pos-menu-card-price">₹{item.price.toFixed(0)}</span>
@@ -795,6 +839,7 @@ const POSPage = () => {
                     onChange={handlePhoneInput}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                     autoComplete="off"
+                    autoFocus
                     style={{ border: '1px solid #CFD8DC', borderRadius: '4px', padding: '8px', fontSize: '14px', outline: 'none', flex: 1 }}
                   />
                   <button
