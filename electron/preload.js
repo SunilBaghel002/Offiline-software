@@ -28,6 +28,7 @@ const validInvokeChannels = [
   'order:getRecent',
   'order:getById',
   'order:complete',
+  'order:getActiveCount',
   'order:cancel',
   'order:delete',
   'order:getHeld',

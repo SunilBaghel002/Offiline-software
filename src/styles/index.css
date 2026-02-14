@@ -1575,8 +1575,8 @@ h4 {
   padding: 0 var(--spacing-4);
   flex-shrink: 0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border-bottom: 3px solid #D32F2F;
-  /* Red accent line */
+  border-bottom: 3px solid #E49B0F;
+  /* ZapBill Orange accent line */
   z-index: 20;
 }
 
@@ -1598,7 +1598,7 @@ h4 {
   /* Serif font as per PetPooja logo */
   font-size: 26px;
   font-weight: 700;
-  color: #D32F2F;
+  color: #E49B0F;
   letter-spacing: -0.5px;
 }
 
@@ -1637,7 +1637,7 @@ h4 {
 }
 
 .pos-new-order-btn {
-  background: #D32F2F;
+  background: #E49B0F;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -1645,7 +1645,7 @@ h4 {
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(211, 47, 47, 0.3);
+  box-shadow: 0 2px 4px rgba(228, 155, 15, 0.3);
   transition: all 0.2s;
 }
 

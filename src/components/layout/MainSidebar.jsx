@@ -20,13 +20,33 @@ const MainSidebar = ({ isOpen, onClose }) => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
+  const [activeOrdersCount, setActiveOrdersCount] = React.useState(0);
+
+  React.useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const count = await window.electronAPI.invoke('order:getActiveCount');
+        setActiveOrdersCount(count);
+      } catch (err) {
+        console.error('Failed to fetch active order count', err);
+      }
+    };
+
+    if (isOpen) {
+      fetchCount();
+      // Poll only when open
+      const interval = setInterval(fetchCount, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [isOpen]);
+
   const isAdmin = user?.role === 'admin';
 
   // All nav items with role restrictions
   const allNavItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', adminOnly: true },
     { path: '/pos', icon: ShoppingCart, label: 'POS / Billing', adminOnly: false },
-    { path: '/orders', icon: ClipboardList, label: 'Orders', adminOnly: false },
+    { path: '/orders', icon: ClipboardList, label: 'Orders', badge: activeOrdersCount > 0 ? activeOrdersCount : null, adminOnly: false },
     { path: '/menu', icon: UtensilsCrossed, label: 'Menu', adminOnly: true },
     { path: '/kot', icon: ChefHat, label: 'Kitchen (KOT)', adminOnly: false },
     { path: '/inventory', icon: Package, label: 'Inventory', adminOnly: true },
@@ -82,7 +102,7 @@ const MainSidebar = ({ isOpen, onClose }) => {
         {/* Header */}
         <div style={{ padding: '20px', borderBottom: '1px solid #37474F', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ background: '#D32F2F', padding: '8px', borderRadius: '8px' }}>
+                <div style={{ background: '#E49B0F', padding: '8px', borderRadius: '8px' }}>
                     <UtensilsCrossed size={24} color="white" />
                 </div>
                 <div>
@@ -112,7 +132,7 @@ const MainSidebar = ({ isOpen, onClose }) => {
                     padding: '12px 24px',
                     color: isActive ? 'white' : '#B0BEC5',
                     textDecoration: 'none',
-                    background: isActive ? '#D32F2F' : 'transparent',
+                    background: isActive ? '#E49B0F' : 'transparent',
                     borderLeft: isActive ? '4px solid #FFC107' : '4px solid transparent',
                     transition: 'all 0.2s'
                 })}
@@ -120,7 +140,7 @@ const MainSidebar = ({ isOpen, onClose }) => {
                 <item.icon size={20} />
                 <span style={{ fontSize: '14px', fontWeight: 500 }}>{item.label}</span>
                 {item.badge && (
-                <span style={{ marginLeft: 'auto', background: '#D32F2F', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: 'bold' }}>
+                <span style={{ marginLeft: 'auto', background: '#E49B0F', color: 'white', padding: '2px 6px', borderRadius: '10px', fontSize: '10px', fontWeight: 'bold' }}>
                     {item.badge}
                 </span>
                 )}
@@ -151,9 +171,9 @@ const MainSidebar = ({ isOpen, onClose }) => {
                 </button>
                 <button 
                     onClick={handleLogout}
-                    style={{ padding: '10px 14px', background: '#D32F2F', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px', transition: 'background 0.2s' }}
-                    onMouseOver={e => e.currentTarget.style.background = '#B71C1C'}
-                    onMouseOut={e => e.currentTarget.style.background = '#D32F2F'}
+                    style={{ padding: '10px 14px', background: '#E49B0F', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px', transition: 'background 0.2s' }}
+                    onMouseOver={e => e.currentTarget.style.background = '#C4840C'}
+                    onMouseOut={e => e.currentTarget.style.background = '#E49B0F'}
                     title="Logout"
                 >
                     <LogOut size={14} />

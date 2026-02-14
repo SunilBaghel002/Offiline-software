@@ -21,10 +21,27 @@ const Sidebar = () => {
 
   const isAdmin = user?.role === 'admin';
 
+  const [activeOrdersCount, setActiveOrdersCount] = React.useState(0);
+
+  React.useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const count = await window.electronAPI.invoke('order:getActiveCount');
+        setActiveOrdersCount(count);
+      } catch (err) {
+        console.error('Failed to fetch active order count', err);
+      }
+    };
+
+    fetchCount();
+    const interval = setInterval(fetchCount, 5000); // Poll every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   const allNavItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', adminOnly: true },
     { path: '/pos', icon: ShoppingCart, label: 'POS / Billing', adminOnly: false },
-    { path: '/orders', icon: ClipboardList, label: 'Orders', badge: 3, adminOnly: false },
+    { path: '/orders', icon: ClipboardList, label: 'Orders', badge: activeOrdersCount > 0 ? activeOrdersCount : null, adminOnly: false },
     { path: '/menu', icon: UtensilsCrossed, label: 'Menu', adminOnly: true },
     { path: '/kot', icon: ChefHat, label: 'Kitchen (KOT)', adminOnly: false },
     { path: '/inventory', icon: Package, label: 'Inventory', adminOnly: true },

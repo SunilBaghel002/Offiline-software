@@ -37,6 +37,7 @@ function createWindow() {
       devTools: isDev,
     },
     show: false, // Don't show until ready
+    autoHideMenuBar: true, // Hide default menu bar
   });
 
   // Load the app
@@ -267,6 +268,15 @@ function setupIpcHandlers() {
     } catch (error) {
       log.error('Delete category error:', error);
       return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('order:getActiveCount', async () => {
+    try {
+      return db.getActiveOrderCount();
+    } catch (error) {
+      log.error('Get active order count error:', error);
+      return 0;
     }
   });
 

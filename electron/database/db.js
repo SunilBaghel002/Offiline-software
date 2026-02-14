@@ -670,6 +670,21 @@ class Database {
     return { success: true, successCount, errorCount, errors };
   }
 
+  // ===== Order Operations =====
+  getActiveOrderCount() {
+    try {
+      const result = this.execute(`
+        SELECT COUNT(*) as count 
+        FROM orders 
+        WHERE status IN ('pending', 'in-progress', 'ready')
+      `);
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error('Error fetching active order count:', error);
+      return 0;
+    }
+  }
+
   // ===== Global Addons Operations =====
   getAddons() {
     return this.execute(
