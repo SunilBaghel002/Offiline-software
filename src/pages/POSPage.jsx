@@ -47,6 +47,7 @@ import {
   Star
 } from 'lucide-react';
 import MainSidebar from '../components/layout/MainSidebar';
+import CustomAlert from '../components/ui/CustomAlert';
 import '../styles/pos-sheet.css';
 
 const CustomerHistoryModal = ({ isOpen, onClose, history, customerName, customerPhone }) => {
@@ -152,6 +153,69 @@ const CustomerHistoryModal = ({ isOpen, onClose, history, customerName, customer
   );
 };
 
+const ConfirmOrderModal = ({ isOpen, onClose, onConfirm, total, itemsCount }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 2000 }}>
+      {/* Added animate-scale-in for smooth entry */}
+      <div 
+        className="modal" 
+        onClick={e => e.stopPropagation()} 
+        style={{ 
+          width: '400px', 
+          maxWidth: '90%',
+          height: 'auto',        // Force auto height
+          minHeight: 'auto',     // Override any min-height
+          textAlign: 'center', 
+          padding: '24px',       // Reduced padding slightly
+          borderRadius: '16px',  // Softer corners
+          boxShadow: '0 10px 25px rgba(0,0,0,0.15)', // Better shadow
+          background: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center'
+        }}
+      >
+        <div style={{ 
+          width: '80px', height: '80px', background: '#E8F5E9', borderRadius: '50%', 
+          display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' 
+        }}>
+          <Check size={40} color="#2E7D32" strokeWidth={3} />
+        </div>
+        
+        <h3 style={{ fontSize: '20px', color: '#1A2327', marginBottom: '8px' }}>Confirm Order?</h3>
+        <p style={{ color: '#546E7A', marginBottom: '24px', fontSize: '15px' }}>
+          Send <strong>{itemsCount} items</strong> to kitchen?<br/>
+          Total Amount: <strong>₹{total.toFixed(2)}</strong>
+        </p>
+
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <button 
+            onClick={onClose}
+            style={{ 
+              padding: '12px 24px', borderRadius: '8px', border: '1px solid #CFD8DC', 
+              background: 'white', color: '#546E7A', fontWeight: '600', cursor: 'pointer', flex: 1
+            }}
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => { onConfirm(); onClose(); }}
+            style={{ 
+              padding: '12px 24px', borderRadius: '8px', border: 'none', 
+              background: '#2E7D32', color: 'white', fontWeight: '600', cursor: 'pointer', flex: 1,
+              boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)'
+            }}
+          >
+            Confirm & Print
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const POSPage = () => {
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
@@ -182,7 +246,38 @@ const POSPage = () => {
   const [customerLocality, setCustomerLocality] = useState('');
   const [showTableDropdown, setShowTableDropdown] = useState(false);
   const [showOrderInfo, setShowOrderInfo] = useState(false);
+
   const [activeCartTab, setActiveCartTab] = useState(null); // 'table', 'user', 'chef', 'summary'
+  
+  // Custom Confirm Modal State
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingOrderAction, setPendingOrderAction] = useState(null); // function to execute on confirm
+
+  const triggerOrderConfirmation = (action) => {
+    setPendingOrderAction(() => action);
+    setShowConfirmModal(true);
+  };
+
+  // Custom Alert State
+  const [alertState, setAlertState] = useState({
+    isOpen: false,
+    message: '',
+    type: 'info', // success, error, info, warning, confirm
+    onConfirm: null
+  });
+
+  const showAlert = (message, type = 'info', onConfirm = null) => {
+    setAlertState({
+      isOpen: true,
+      message,
+      type,
+      onConfirm
+    });
+  };
+
+  const closeAlert = () => {
+    setAlertState(prev => ({ ...prev, isOpen: false }));
+  };
 
   const handlePhoneInput = async (e) => {
     const val = e.target.value;
@@ -210,13 +305,13 @@ const POSPage = () => {
   };
 
   const fetchHistory = async () => {
-    if (!cart.customerPhone) return alert("Please enter mobile number first");
+    if (!cart.customerPhone) return showAlert("Please enter mobile number first", "warning");
     try {
       const history = await window.electronAPI.invoke('customer:getHistory', { phone: cart.customerPhone });
       setHistoryData(history);
       setShowHistoryModal(true);
     } catch (err) {
-      alert("Failed to fetch history");
+      showAlert("Failed to fetch history", "error");
     }
   };
 
@@ -297,11 +392,11 @@ const POSPage = () => {
     // Validate Customer Details
     if (!cart.customerName?.trim() || !cart.customerPhone?.trim()) {
       setShowCustomerForm(true);
-      alert("Customer Name and Phone Number are mandatory!");
+      showAlert("Customer Name and Phone Number are mandatory!", "warning");
       return;
     }
 
-    if (window.confirm('Confirm Order & Send to Kitchen?')) {
+    triggerOrderConfirmation(async () => {
       try {
         const result = await cart.createOrder(user?.id);
         if (result.success) {
@@ -311,16 +406,16 @@ const POSPage = () => {
           // 4. Alert/Notify
           const order = await window.electronAPI.invoke('order:getById', { id: result.id });
           await window.electronAPI.invoke('print:kot', { order: order, items: order.items });
-          alert(`Order #${result.orderNumber} Placed Successfully!`);
+          showAlert(`Order #${result.orderNumber} Placed Successfully!`, "success");
           loadData();
         } else {
-          alert('Order Failed: ' + result.error);
+          showAlert('Order Failed: ' + result.error, "error");
         }
       } catch (error) {
         console.error(error);
-        alert('Error processing order');
+        showAlert('Error processing order', "error");
       }
-    }
+    });
   };
 
   const handleNewOrder = () => {
@@ -337,13 +432,13 @@ const POSPage = () => {
     if (cart.items.length === 0) {
       // Logic for empty cart: check held orders
       if (cart.heldOrders.length === 0) {
-        alert('Cart is empty and no held orders.');
+        showAlert('Cart is empty and no held orders.', "info");
       } else if (cart.heldOrders.length === 1) {
         // Auto-resume if only 1
         const order = cart.heldOrders[0];
-        if (window.confirm(`Resume held order #${order.orderNumber}?`)) {
-          cart.resumeOrder(order);
-        }
+        showAlert(`Resume held order #${order.orderNumber}?`, "confirm", () => {
+           cart.resumeOrder(order);
+        });
       } else {
         // Show modal if > 1
         setShowHeldOrders(true);
@@ -352,21 +447,23 @@ const POSPage = () => {
     }
 
     // Logic for non-empty cart: Hold it
-    if (window.confirm('Hold this order and clear cart?')) {
+    showAlert('Hold this order and clear cart?', "confirm", () => {
       const result = cart.holdOrder();
       if (result.success) {
-        // alert('Order Held Successfully');
+         showAlert('Order Held Successfully', "success");
       } else {
-        alert('Failed to hold order: ' + result.error);
+        showAlert('Failed to hold order: ' + result.error, "error");
       }
-    }
+    });
   };
 
   const handleResumeOrder = (order) => {
     if (cart.items.length > 0) {
-      if (!window.confirm('Current cart will be cleared to resume order. Continue?')) {
-        return;
-      }
+      showAlert('Current cart will be cleared to resume order. Continue?', "confirm", () => {
+         cart.resumeOrder(order);
+         setShowHeldOrders(false);
+      });
+      return;
     }
 
     cart.resumeOrder(order);
@@ -374,12 +471,12 @@ const POSPage = () => {
   };
 
   const handleDeleteHeldOrder = (orderId) => {
-    if (window.confirm('Are you sure you want to delete this held order?')) {
+    showAlert('Are you sure you want to delete this held order?', "confirm", () => {
       cart.removeHeldOrder(orderId);
       if (cart.heldOrders.length === 0) {
         setShowHeldOrders(false);
       }
-    }
+    });
   };
 
   // KOT Only - Send to kitchen without completing order
@@ -390,7 +487,7 @@ const POSPage = () => {
       // Validate Customer Details
       if (!cart.customerName?.trim() || !cart.customerPhone?.trim()) {
         setShowCustomerForm(true);
-        alert("Customer Name and Phone Number are mandatory!");
+        showAlert("Customer Name and Phone Number are mandatory!", "warning");
         return;
       }
 
@@ -421,10 +518,10 @@ const POSPage = () => {
       cart.setDeliveryCharge(0);
       cart.setContainerCharge(0);
 
-      alert('KOT sent to kitchen!');
+      showAlert('KOT sent to kitchen!', "success");
     } catch (error) {
       console.error('KOT print error:', error);
-      alert('Error sending KOT: ' + error.message);
+      showAlert('Error sending KOT: ' + error.message, "error");
     }
   };
 
@@ -454,14 +551,14 @@ const POSPage = () => {
 
         // Charges are already reset by createOrder -> clearCart
 
-        alert(`Order #${result.orderNumber} Saved & Sent to KOT!`);
+        showAlert(`Order #${result.orderNumber} Saved & Sent to KOT!`, "success");
         setShowBillSheet(false);
       } else {
         throw new Error(result.error || 'Failed to create order');
       }
     } catch (error) {
       console.error('Save & KOT error:', error);
-      alert('Error: ' + error.message);
+      showAlert('Error: ' + error.message, "error");
     }
   };
 
@@ -492,13 +589,13 @@ const POSPage = () => {
         // Print Receipt
         await window.electronAPI.invoke('print:receipt', { order: order });
 
-        alert(`Order #${result.orderNumber} placed! KOT & Receipt printed.`);
+        showAlert(`Order #${result.orderNumber} placed! KOT & Receipt printed.`, "success");
       } else {
         throw new Error(result.error || 'Failed to create order');
       }
     } catch (error) {
       console.error('KOT & Print error:', error);
-      alert('Error: ' + error.message);
+      showAlert('Error: ' + error.message, "error");
     }
   };
 
@@ -528,13 +625,13 @@ const POSPage = () => {
         // Print Receipt
         await window.electronAPI.invoke('print:receipt', { order: order });
 
-        alert(`Order #${result.orderNumber} completed! Receipt printed.`);
+        showAlert(`Order #${result.orderNumber} completed! Receipt printed.`, "success");
       } else {
         throw new Error(result.error || 'Failed to create order');
       }
     } catch (error) {
       console.error('Save & Print error:', error);
-      alert('Error: ' + error.message);
+      showAlert('Error: ' + error.message, "error");
     }
   };
 
@@ -1409,6 +1506,23 @@ const POSPage = () => {
       {/* Main Sidebar Overlay */}
       <MainSidebar isOpen={showMainSidebar} onClose={() => setShowMainSidebar(false)} />
 
+      {/* Confirmation Modal */}
+      <ConfirmOrderModal 
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={pendingOrderAction}
+        total={cart.getGrandTotal()}
+        itemsCount={cart.items.reduce((acc, item) => acc + item.quantity, 0)}
+      />
+
+      <CustomAlert 
+        isOpen={alertState.isOpen}
+        message={alertState.message}
+        type={alertState.type}
+        onClose={closeAlert}
+        onConfirm={alertState.onConfirm}
+      />
+
     </div>
   );
 };
@@ -1424,16 +1538,36 @@ const AddonSelectionModal = ({ item, onClose, onAddToCart }) => {
   const calculateTotal = () => {
     let total = selectedVariant ? parseFloat(selectedVariant.price) : item.price;
     selectedAddons.forEach(addon => {
-      total += parseFloat(addon.price);
+      total += parseFloat(addon.price) * (addon.quantity || 1);
     });
     return total * quantity;
   };
 
   const toggleAddon = (addon) => {
-    if (selectedAddons.some(a => a.name === addon.name)) {
-      setSelectedAddons(selectedAddons.filter(a => a.name !== addon.name));
+    const existing = selectedAddons.find(a => a.name === addon.name);
+    if (existing) {
+      // If already selected, increase quantity
+      setSelectedAddons(selectedAddons.map(a => 
+        a.name === addon.name ? { ...a, quantity: (a.quantity || 1) + 1 } : a
+      ));
     } else {
-      setSelectedAddons([...selectedAddons, addon]);
+      // Add new with quantity 1
+      setSelectedAddons([...selectedAddons, { ...addon, quantity: 1 }]);
+    }
+  };
+
+  const decreaseAddon = (e, addon) => {
+    e.stopPropagation(); // Prevent toggling
+    const existing = selectedAddons.find(a => a.name === addon.name);
+    if (existing) {
+      if (existing.quantity > 1) {
+        setSelectedAddons(selectedAddons.map(a => 
+          a.name === addon.name ? { ...a, quantity: a.quantity - 1 } : a
+        ));
+      } else {
+        // Remove if quantity becomes 0
+        setSelectedAddons(selectedAddons.filter(a => a.name !== addon.name));
+      }
     }
   };
 
@@ -1443,8 +1577,8 @@ const AddonSelectionModal = ({ item, onClose, onAddToCart }) => {
   );
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal addon-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1050 }}>
+      <div className="modal addon-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', width: '90%', maxHeight: '90vh', height: 'auto' }}>
         {/* Modal Header */}
         <div className="addon-modal-header">
           <div>
@@ -1497,19 +1631,60 @@ const AddonSelectionModal = ({ item, onClose, onAddToCart }) => {
                   <span style={{ width: '4px', height: '16px', background: '#FF9800', borderRadius: '4px', display: 'inline-block' }}></span>
                   {selectedVariant?.name || 'Default'}
                 </span>
-                <span className="addon-group-info" style={{ fontSize: '12px', color: '#78909C' }}>Multiple Add-ons (Min: 0, Max: 7)</span>
+                <span className="addon-group-info" style={{ fontSize: '12px', color: '#78909C' }}>Click to add/increase quantity</span>
               </div>
-              <div className="addon-grid">
+              <div className="addon-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
                 {filteredAddons.map((addon, idx) => {
-                  const isSelected = selectedAddons.some(a => a.name === addon.name);
+                  const selected = selectedAddons.find(a => a.name === addon.name);
+                  const isSelected = !!selected;
+                  const qty = selected?.quantity || 0;
+                  
                   return (
                     <div
                       key={idx}
                       className={`addon-item ${addon.type !== 'veg' ? 'nonveg' : ''} ${isSelected ? 'selected' : ''}`}
                       onClick={() => toggleAddon(addon)}
+                      style={{ position: 'relative', overflow: 'hidden' }}
                     >
                       <span className="addon-item-name">{addon.name}</span>
                       <span className="addon-item-price">₹{parseFloat(addon.price).toFixed(0)}</span>
+                      
+                      {isSelected && (
+                        <div style={{ 
+                          position: 'absolute', 
+                          top: 0, 
+                          right: 0, 
+                          background: '#E49B0F', 
+                          color: 'white', 
+                          padding: '2px 8px', 
+                          borderRadius: '0 0 0 8px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          {qty > 1 && (
+                            <div 
+                              onClick={(e) => decreaseAddon(e, addon)}
+                              style={{ 
+                                cursor: 'pointer',
+                                background: 'rgba(0,0,0,0.2)',
+                                borderRadius: '50%',
+                                width: '16px',
+                                height: '16px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginRight: '4px'
+                              }}
+                            >
+                              -
+                            </div>
+                          )}
+                          x{qty}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
