@@ -5,17 +5,17 @@
 
 /* CSS Variables / Design Tokens */
 :root {
-  /* Primary Colors - ZapBill Orange */
-  --primary-50: #fefce8;
-  --primary-100: #fff7ed;
-  --primary-200: #ffedd5;
-  --primary-300: #fed7aa;
-  --primary-400: #fdba74;
-  --primary-500: #E49B0F;
-  --primary-600: #ca8a04;
-  --primary-700: #a16207;
-  --primary-800: #854d0e;
-  --primary-900: #713f12;
+  /* Primary Colors - ZapBill Blue (#0096FF) */
+  --primary-50: #e0f2fe;
+  --primary-100: #bae6fd;
+  --primary-200: #7dd3fc;
+  --primary-300: #38bdf8;
+  --primary-400: #0ea5e9;
+  --primary-500: #0096FF;
+  --primary-600: #0284c7;
+  --primary-700: #0369a1;
+  --primary-800: #075985;
+  --primary-900: #0c4a6e;
 
   /* Secondary Colors - Dark Navy */
   --secondary-50: #f0f4f8;
@@ -144,9 +144,9 @@
   /* Full width */
 
   /* ZapBill Specific Colors */
-  --pp-red: #E49B0F; /* Replaced with Primary */
+  --pp-red: #0096FF; /* Primary Blue */
   /* Main Action / Header */
-  --pp-dark-red: #A66808;
+  --pp-dark-red: #007ACC;
   /* Active States */
   --pp-black: #212121;
   /* UI Dark Elements */
@@ -1710,46 +1710,58 @@ h4 {
   flex-direction: row;
 }
 
-/* Category Sidebar - Wide Text Tabs */
+/* Category Sidebar - Dark Theme (Matching Main Sidebar) */
 .pos-category-sidebar {
-  width: 180px;
-  background: #37474F;
-  /* Dark Slate Grey */
+  width: 100px; /* Reduced width for icon-centric look */
+  background: #1A2327; /* Dark Sidebar */
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  border-right: 1px solid var(--gray-300);
+  border-right: 1px solid #37474F;
 }
 
 .pos-category-item {
-  height: 50px;
+  height: 80px; /* Taller items for icons */
   display: flex;
+  flex-direction: column; /* Stack symbol and text */
   align-items: center;
-  padding: 0 var(--spacing-4);
+  justify-content: center;
+  padding: 0 var(--spacing-2);
   cursor: pointer;
-  color: #CFD8DC;
+  color: #B0BEC5; /* Light Gray Text */
   font-weight: 500;
-  font-size: 14px;
-  border-bottom: 1px solid #455A64;
+  font-size: 11px; /* Smaller text */
+  border-bottom: 1px solid #37474F;
   transition: all 0.2s;
-  justify-content: flex-start;
-  /* Left align */
+  text-align: center;
 }
 
 .pos-category-item:hover {
-  background: #455A64;
+  background: #263238;
   color: white;
 }
 
 .pos-category-item.active {
-  background: #D32F2F;
-  /* Active Red */
+  background: var(--primary-600); /* Blue Active */
   color: white;
   font-weight: 600;
+  box-shadow: none;
+  position: relative;
+}
+
+.pos-category-item.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #FFC107; /* Orange Accent from Main Sidebar */
 }
 
 .pos-category-icon-wrapper {
-  margin-right: 12px;
+  margin-right: 0; /* Remove margin for centered stack */
+  margin-bottom: 4px; /* Add bottom margin for text */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1758,14 +1770,12 @@ h4 {
 /* Menu Grid */
 .pos-menu-area {
   flex: 1;
-  padding: var(--spacing-2);
+  padding: var(--spacing-4);
   background: #ECEFF1;
 }
 
 /* Menu Card merged into later definition */
-.pos-menu-card.nonveg {
-  border-left-color: #D32F2F;
-}
+/* Menu Card merged into later definition */
 
 /* Cart Panel Overrides */
 /* Cart Panel merged into later definition */
@@ -2360,7 +2370,7 @@ h4 {
 }
 
 .pos-action-btn.btn-save {
-  background: #2E7D32;
+  background: #10B981; /* Vibrant Green */
 }
 
 /* Red */
@@ -3078,14 +3088,7 @@ h4 {
 }
 
 /* POS Footer Action Buttons */
-.pos-action-btn.btn-save {
-  background: #D32F2F;
-  border: 1px solid #B71C1C;
-}
 
-.pos-action-btn.btn-save:hover {
-  background: #B71C1C;
-}
 
 .pos-action-btn.btn-print {
   background: #1976D2;
@@ -3200,25 +3203,7 @@ h4 {
   color: #E49B0F;
 }
 
-/* Category Sidebar Updates */
-.pos-category-sidebar {
-  width: 180px;
-  background: #263238;
-  /* Dark styling as per some PetPooja themes */
-  color: #B0BEC5;
-}
 
-.pos-category-item {
-  color: inherit;
-  border-bottom: 1px solid #37474F;
-  height: 60px;
-}
-
-.pos-category-item.active {
-  background: #D32F2F;
-  color: white;
-  border-left: 4px solid #FFC107;
-}
 
 /* Cleaned up styles from POSPage.jsx inline styles */
 

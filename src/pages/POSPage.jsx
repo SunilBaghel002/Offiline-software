@@ -243,7 +243,6 @@ const POSPage = () => {
   const [historyData, setHistoryData] = useState([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [customerAddress, setCustomerAddress] = useState('');
-  const [customerLocality, setCustomerLocality] = useState('');
   const [showTableDropdown, setShowTableDropdown] = useState(false);
   const [showOrderInfo, setShowOrderInfo] = useState(false);
 
@@ -679,7 +678,12 @@ const POSPage = () => {
           >
             <Menu size={24} color="#546E7A" />
           </button>
-          <div className="pos-logo-text">ZapBill</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ background: '#0096FF', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <UtensilsCrossed size={20} color="white" />
+            </div>
+            <div className="pos-logo-text" style={{ color: '#0096FF', fontWeight: 'bold', fontSize: '20px', fontFamily: 'sans-serif' }}>ZapBill</div>
+          </div>
         </div>
 
         <div className="pos-search-wrapper">
@@ -996,18 +1000,6 @@ const POSPage = () => {
                   style={{ border: '1px solid #CFD8DC', borderRadius: '4px', padding: '8px', fontSize: '14px', outline: 'none', width: '100%' }}
                 />
               </div>
-
-              {/* Locality */}
-              <div>
-                <label style={{ color: '#546E7A', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Locality:</label>
-                <input
-                  type="text"
-                  placeholder="Enter Locality"
-                  value={customerLocality}
-                  onChange={(e) => setCustomerLocality(e.target.value)}
-                  style={{ border: '1px solid #CFD8DC', borderRadius: '4px', padding: '8px', fontSize: '14px', outline: 'none', width: '100%' }}
-                />
-              </div>
             </div>
           )}
 
@@ -1259,7 +1251,7 @@ const POSPage = () => {
             {/* Action Bar */}
             <div className="pos-action-bar">
               <button className="pos-action-btn btn-save" onClick={handleCheckout}>
-                <Check size={20} style={{ marginBottom: '4px' }} strokeWidth={3} />
+                <Save size={20} style={{ marginBottom: '4px' }} />
                 Save
               </button>
               <button className="pos-action-btn btn-print" onClick={handleSaveAndPrint}>
