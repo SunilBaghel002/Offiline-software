@@ -121,6 +121,35 @@ const SettingsPage = () => {
     }
   };
 
+  const [dbPath, setDbPath] = useState('');
+  const [isMovingDb, setIsMovingDb] = useState(false);
+
+  useEffect(() => {
+    window.electronAPI.invoke('db:getPath').then(setDbPath).catch(console.error);
+  }, []);
+
+  const handleMoveDb = async () => {
+    if (!confirm('Are you sure you want to move the database? The application will need to restart.')) return;
+    
+    setIsMovingDb(true);
+    try {
+      const result = await window.electronAPI.invoke('db:movePath');
+      if (result.success) {
+        alert('Database moved successfully! The application will now restart.');
+        // Trigger generic "reload" or just let the user restart. 
+        // Ideally main process handles restart but for now we can alert.
+        window.location.reload(); 
+      } else if (!result.cancelled) {
+        alert('Failed to move database: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Move DB error:', error);
+      alert('Error moving database: ' + error.message);
+    } finally {
+      setIsMovingDb(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="empty-state">
@@ -392,6 +421,41 @@ const SettingsPage = () => {
                  )}
                </div>
             )}
+          </div>
+        </div>
+
+        {/* Database Management */}
+        <div className="card">
+          <div className="card-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-2)' }}>
+              <Settings size={20} />
+              <h3>Database Settings</h3>
+            </div>
+          </div>
+          <div className="card-body">
+            <div className="input-group">
+               <label className="input-label">Current Database Location</label>
+               <div style={{ display: 'flex', gap: '10px' }}>
+                 <input 
+                    type="text" 
+                    className="input" 
+                    value={dbPath || 'Loading...'} 
+                    readOnly 
+                    disabled
+                    style={{ background: 'var(--gray-100)', color: 'var(--gray-600)' }}
+                 />
+                 <button 
+                    className="btn btn-secondary"
+                    onClick={handleMoveDb}
+                    disabled={isMovingDb}
+                 >
+                    {isMovingDb ? 'Moving...' : 'Move...'}
+                 </button>
+               </div>
+               <p style={{ fontSize: '12px', color: 'var(--gray-500)', marginTop: '6px' }}>
+                 Note: The application will restart after moving the database.
+               </p>
+            </div>
           </div>
         </div>
 

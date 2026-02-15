@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, Tray } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Tray, dialog } = require('electron');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
@@ -6,6 +6,7 @@ const { Database } = require('./database/db');
 const AuthService = require('./services/auth.service');
 const PrinterService = require('./services/printer.service');
 const dataImporter = require('./services/dataImporter');
+const fs = require('fs');
 
 // Configure logging
 log.transports.file.level = 'info';
@@ -167,6 +168,50 @@ function setupIpcHandlers() {
       return db.execute(table, action, data, where);
     } catch (error) {
       log.error('Database error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle('db:getPath', async () => {
+    return db.dbPath;
+  });
+
+  ipcMain.handle('db:movePath', async () => {
+    try {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        properties: ['openDirectory', 'createDirectory'],
+        title: 'Select New Database Folder',
+        buttonLabel: 'Move Database Here'
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, cancelled: true };
+      }
+
+      const newFolder = result.filePaths[0];
+      const oldPath = db.dbPath;
+      const newPath = path.join(newFolder, 'restaurant_pos.db');
+
+      if (oldPath === newPath) {
+        return { success: false, error: 'Source and destination are the same.' };
+      }
+
+      // Close current connection
+      db.close();
+
+      // Copy file
+      fs.copyFileSync(oldPath, newPath);
+
+      // Update config
+      const userDataPath = app.getPath('userData');
+      const configPath = path.join(userDataPath, 'config.json');
+      fs.writeFileSync(configPath, JSON.stringify({ dbPath: newFolder }));
+
+      return { success: true, newPath };
+    } catch (error) {
+      log.error('Move DB error:', error);
+      // Try to re-open DB if failed
+      await db.initialize(); 
       return { success: false, error: error.message };
     }
   });

@@ -9,6 +9,8 @@ const validInvokeChannels = [
   'auth:getCurrentUser',
   // Database
   'db:query',
+  'db:getPath',
+  'db:movePath',
   // Menu
   'menu:getCategories',
   'menu:getItems',

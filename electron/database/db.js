@@ -30,7 +30,22 @@ class Database {
 
     // Database path in user data directory
     const userDataPath = app.getPath('userData');
-    this.dbPath = path.join(userDataPath, 'restaurant_pos.db');
+    const configPath = path.join(userDataPath, 'config.json');
+    
+    // Check for custom path in config
+    let dbFolder = userDataPath;
+    try {
+      if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        if (config.dbPath && fs.existsSync(config.dbPath)) {
+          dbFolder = config.dbPath;
+        }
+      }
+    } catch (error) {
+      console.error('Error reading config.json:', error);
+    }
+
+    this.dbPath = path.join(dbFolder, 'restaurant_pos.db');
     
     // Load existing database or create new one
     if (fs.existsSync(this.dbPath)) {
