@@ -48,7 +48,8 @@
     "appId": "com.restaurant.pos",
     "productName": "ZapBill POS",
     "directories": {
-      "output": "dist-electron"
+      "output": "dist-electron",
+      "buildResources": "public"
     },
     "files": [
       "dist/**/*",
